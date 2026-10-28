@@ -2,5 +2,9 @@
   "name": "agile-ai-manifesto",
   "private": true,
   "type": "module",
-  "scripts": { "build": "node scripts/build.mjs", "test": "node --test" }
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test",
+    "dev": "npm run build && node scripts/dev.mjs"
+  }
 }
