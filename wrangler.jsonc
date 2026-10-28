@@ -1,0 +1,8 @@
+{
+  "name": "agile-ai-manifesto",
+  "main": ".build/worker.mjs",
+  "compatibility_date": "2026-10-28",
+  "account_id": "530e6463bf124047787278c97269c32e",
+  "workers_dev": false,
+  "routes": [{ "pattern": "agileaimanifesto.org", "custom_domain": true }]
+}
