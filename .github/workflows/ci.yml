@@ -11,6 +11,8 @@ jobs:
       packages: read
       statuses: read
     uses: Verjson/.github/.github/workflows/node-ci.yml@3d5770fb482220ba0ce1f35a3ee95301143f09af
+    secrets:
+      NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
     with:
       node-version: '24.19.0'
       secretless-pr: true
