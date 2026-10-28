@@ -1,5 +1,7 @@
 # Unreleased
 
+- Add the organization Node CI workflow to validate builds and tests on pull requests.
+
 - Add a dependency-free local development server and startup instructions.
 
 - Add an original diagram illustrating the relationship between intent, agents, and evidence.
