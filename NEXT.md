@@ -1,5 +1,7 @@
 # Unreleased
 
+- Strengthen manifesto principles on evidence, specifications, delegated authority, and human accountability.
+
 
 - Add a dependency-free local development server and startup instructions.
 
