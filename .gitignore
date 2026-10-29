@@ -1,3 +1,4 @@
 .build/
 .wrangler/
+.serena/
 node_modules/
