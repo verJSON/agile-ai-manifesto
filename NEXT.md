@@ -1,5 +1,7 @@
 # Unreleased
 
+- Link the contracts section to the published verJSON articles on versioned contracts and audit evidence (#7).
+
 - Restore the www hostname with a managed Cloudflare custom domain and an HTTPS canonical redirect that preserves paths and queries (#4).
 
 - Ignore local Serena project configuration.
