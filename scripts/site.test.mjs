@@ -16,7 +16,8 @@ test('homepage serves the manifesto and versioned-contracts context', async () =
   assert.match(html, /https:\/\/verjson\.com\/blog\/versioned-contracts-for-agentic-systems/);
   assert.match(html, /https:\/\/verjson\.com\/blog\/audit-evidence-for-agentic-actions/);
   assert.match(html, /an evolving direction/);
-  assert.equal((html.match(/<article><span>\d\d \/ 12<\/span>/g) || []).length, 12);
+  assert.deepEqual([...html.matchAll(/<article><span>(\d\d) \/ 13<\/span>/g)].map((match) => Number(match[1])), Array.from({ length: 13 }, (_, index) => index + 1));
+  assert.match(html, /<h3>Own the specification\.<\/h3>/);
   assert.doesNotMatch(html, /\/\* SITE_STYLES \*\//);
 });
 
