@@ -13,6 +13,8 @@ test('homepage serves the manifesto and versioned-contracts context', async () =
   assert.match(html, /Verified customer outcomes/);
   assert.match(html, /Give agents meaningful autonomy/);
   assert.match(html, /Versioned JSON schemas/);
+  assert.match(html, /https:\/\/verjson\.com\/blog\/versioned-contracts-for-agentic-systems/);
+  assert.match(html, /https:\/\/verjson\.com\/blog\/audit-evidence-for-agentic-actions/);
   assert.match(html, /an evolving direction/);
   assert.equal((html.match(/<article><span>\d\d \/ 12<\/span>/g) || []).length, 12);
   assert.doesNotMatch(html, /\/\* SITE_STYLES \*\//);
