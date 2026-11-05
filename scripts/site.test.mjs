@@ -16,6 +16,12 @@ function principle(number) {
   return textOf(match[1]);
 }
 
+function section(id) {
+  const match = page.match(new RegExp(`<section id="${id}"[\\s\\S]*?</section>`));
+  assert.ok(match, `section #${id} is missing from the page`);
+  return textOf(match[0]);
+}
+
 function assertIncludes(text, expected) {
   assert.ok(text.includes(expected), `expected text to include:\n  ${expected}\nactual:\n  ${text}`);
 }
@@ -31,7 +37,6 @@ test('homepage serves the manifesto and versioned-contracts context', async () =
   const html = await response.text();
   assert.match(html, /Verified customer outcomes/);
   assert.match(html, /Give agents meaningful autonomy/);
-  assert.match(html, /Versioned JSON schemas/);
   assert.match(html, /rel="icon" type="image\/svg\+xml" href="data:image\/svg\+xml,[^"]*%E2%9C%B3/);
   assert.match(html, /https:\/\/verjson\.com\/blog\/versioned-contracts-for-agentic-systems/);
   assert.match(html, /https:\/\/verjson\.com\/blog\/audit-evidence-for-agentic-actions/);
@@ -66,4 +71,10 @@ test('Principle 04 says what an exchanged contract carries and that status alone
   const text = principle(4);
   assertIncludes(text, 'Where systems exchange intent, decisions, or evidence, use versioned, machine-readable contracts that carry them and identify who produced them. A contract that carries only status is not a contract for intent, decisions, or evidence, and a free-text side record does not supply what the contract must carry.');
   assertExcludes(text, 'Use versioned, machine-readable contracts where systems exchange intent and evidence.');
+});
+
+test('Contracts section names the content, rejects the unknown, and separates well formed from true (M-02)', () => {
+  const text = section('contracts');
+  assertIncludes(text, 'Versioned, machine-readable contracts give agents and system tiers a shared language for intent, decisions, evidence, and who produced them. Explicit versions make change visible, keep the meaning of past records, and support compatibility, audit and continuous improvement. A receiver rejects versions and kinds it does not recognize instead of guessing their meaning. A message that passes its schema is well formed, not true: free text can explain, but it never moves work into an approved or finished state, and a claim about who produced a message stays a claim until it is verified.');
+  assertExcludes(text, 'Versioned JSON schemas can give agents');
 });
