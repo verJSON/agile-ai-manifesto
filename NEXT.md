@@ -1,5 +1,7 @@
 # Unreleased
 
+- Restore the manifesto asterisk as the browser tab icon.
+
 - Give specification ownership its own principle and number the manifesto from 1 through 13.
 
 - Link the contracts section to the published verJSON articles on versioned contracts and audit evidence (#7).
