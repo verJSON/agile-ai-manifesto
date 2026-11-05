@@ -4,6 +4,25 @@ import { execFileSync } from 'node:child_process';
 
 execFileSync(process.execPath, ['scripts/build.mjs']);
 const { default: worker } = await import('../.build/worker.mjs');
+const page = await (await worker.fetch(new Request('https://agileaimanifesto.org/'))).text();
+
+function textOf(markup) {
+  return markup.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function principle(number) {
+  const match = page.match(new RegExp(`<article><span>${String(number).padStart(2, '0')} / 13</span>([\\s\\S]*?)</article>`));
+  assert.ok(match, `principle ${number} is missing from the page`);
+  return textOf(match[1]);
+}
+
+function assertIncludes(text, expected) {
+  assert.ok(text.includes(expected), `expected text to include:\n  ${expected}\nactual:\n  ${text}`);
+}
+
+function assertExcludes(text, unexpected) {
+  assert.ok(!text.includes(unexpected), `expected text not to include:\n  ${unexpected}`);
+}
 
 test('homepage serves the manifesto and versioned-contracts context', async () => {
   const response = await worker.fetch(new Request('https://agileaimanifesto.org/'));
@@ -41,4 +60,10 @@ test('www redirects to the HTTPS apex without losing the path or query', async (
       assert.equal(await response.text(), '');
     }
   }
+});
+
+test('Principle 04 says what an exchanged contract carries and that status alone does not meet it (M-01)', () => {
+  const text = principle(4);
+  assertIncludes(text, 'Where systems exchange intent, decisions, or evidence, use versioned, machine-readable contracts that carry them and identify who produced them. A contract that carries only status is not a contract for intent, decisions, or evidence, and a free-text side record does not supply what the contract must carry.');
+  assertExcludes(text, 'Use versioned, machine-readable contracts where systems exchange intent and evidence.');
 });
