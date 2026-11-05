@@ -27,3 +27,14 @@ test('unknown paths and unsupported methods do not serve the page', async () => 
   assert.equal(head.status, 200);
   assert.equal(await head.text(), '');
 });
+
+test('www redirects to the HTTPS apex without losing the path or query', async () => {
+  for (const method of ['GET', 'HEAD', 'POST']) {
+    for (const origin of ['http://www.agileaimanifesto.org', 'https://www.agileaimanifesto.org', 'http://www.agileaimanifesto.org:8080', 'https://www.agileaimanifesto.org:8443']) {
+      const response = await worker.fetch(new Request(`${origin}/missing?next=https%3A%2F%2Fexample.com`, { method }));
+      assert.equal(response.status, 308);
+      assert.equal(response.headers.get('location'), 'https://agileaimanifesto.org/missing?next=https%3A%2F%2Fexample.com');
+      assert.equal(await response.text(), '');
+    }
+  }
+});

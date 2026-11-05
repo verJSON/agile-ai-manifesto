@@ -1,5 +1,7 @@
 # Unreleased
 
+- Restore the www hostname with a managed Cloudflare custom domain and an HTTPS canonical redirect that preserves paths and queries (#4).
+
 - Ignore local Serena project configuration.
 
 - Strengthen manifesto principles on evidence, specifications, delegated authority, and human accountability.
