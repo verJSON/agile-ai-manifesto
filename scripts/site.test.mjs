@@ -139,3 +139,9 @@ test('Principle 06 says a required check that did not run has not passed and gua
 test('Principle 13 keeps dissent on record and sends non-convergence to the accountable owner (M-12)', () => {
   assertIncludes(principle(13), 'People and agents must be able to surface concerns and challenge assumptions. Keep material dissent, and how it was resolved, in the record. When evaluators do not converge, give the disagreement and the options to the accountable owner instead of averaging it away. A time limit, a missing vote, silence, or agreement among evaluators is not by itself proof of correctness, nor a grant of authority. A recorded dissent is a right to be heard, not by itself a veto.');
 });
+
+test('Principle 12 judges against a baseline and counts token savings only on a recorded improvement (M-13)', () => {
+  const text = principle(12);
+  assertIncludes(text, 'Judge the whole outcome against stated goals and a baseline: customer value, quality, latency, operating cost, compute, and the capacity to evaluate and maintain the work. Token efficiency is a means, not a goal. A saving counts only when a recorded comparison shows it improves that whole outcome, for example the same quality at lower cost; an inconclusive comparison is recorded as inconclusive, not as an improvement. A saving never counts when it weakens required verification, traceability, or quality.');
+  assert.doesNotMatch(text, /\b[A-Z]{2,}\b/, 'Principle 12 must carry no all-caps emphasis');
+});
