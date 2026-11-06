@@ -435,3 +435,11 @@ test('the build rejects a malformed edition entry', () => {
   ];
   for (const [entry, reason] of cases) assert.throws(() => renderFixture([current, entry]), reason);
 });
+
+test('the edition list is newest first even when the manifest lists editions oldest first', () => {
+  const pages = renderFixture([
+    { number: '01', year: 2026, source: 'editions/01.html', status: 'archived' },
+    { number: '02', year: 2026, source: 'editions/02.html', status: 'current' },
+  ]);
+  assert.deepEqual(editionList(pages['/']).links.map((link) => link.label), ['02', '01']);
+});
