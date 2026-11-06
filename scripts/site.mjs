@@ -25,6 +25,10 @@ function validateManifest(manifest) {
   if (!Array.isArray(manifest?.editions)) throw new Error('The manifest\'s "editions" must be an array');
   const unknown = Object.keys(manifest).find((key) => !MANIFEST_KEYS.includes(key));
   if (unknown) throw new Error(`The manifest has unknown key ${JSON.stringify(unknown)}`);
+  manifest.editions.forEach((entry, index) => {
+    const isPlainObject = typeof entry === 'object' && entry !== null && Object.getPrototypeOf(entry) === Object.prototype;
+    if (!isPlainObject) throw new Error(`The manifest's edition at index ${index} must be an object`);
+  });
 }
 
 function validateEditions(editions) {

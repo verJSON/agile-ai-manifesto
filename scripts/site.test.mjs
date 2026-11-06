@@ -569,3 +569,11 @@ test('no rule hides elements through a selector without a class or id, which cou
     .map(({ selector, declarations }) => `${selector}{${declarations}}`);
   assert.deepEqual(unqualified, [], 'unqualified hiding rules');
 });
+
+test('the build rejects an edition entry that is not a plain object, before reading anything', () => {
+  for (const entry of [null, 2, 'Edition 01', []]) {
+    const { read, error } = renderRecordingReads([validEntries[0], entry]);
+    assert.match(String(error), /^Error: The manifest's edition at index 1 must be an object$/, JSON.stringify(entry));
+    assert.deepEqual(read, [], `content was read for ${JSON.stringify(entry)}`);
+  }
+});
