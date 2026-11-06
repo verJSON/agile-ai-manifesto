@@ -123,3 +123,7 @@ test('Principle 09 says the named human owner decides the known recommendation b
 test('Principle 07 defines routine and high-consequence work and who may clear each (M-08)', () => {
   assertIncludes(principle(7), 'Replace routine approval queues with evidence-driven evaluation. The consequences and reversibility of a change determine the scrutiny it receives and who may clear it; some evidence takes time to obtain. Routine work is reversible, and evidence shows its failure is bounded and cheap to detect and undo; an independent reviewer, human or agent, can clear it. Work is high-consequence when it is hard to reverse, when security, legal, or customer harm could occur before it can be detected and undone, or when it widens who may act or weakens or removes a required check; its named human owner decides it. Passing checks do not by themselves make work routine. When the class is uncertain, treat the work as high-consequence.');
 });
+
+test('values note says consequence and reversibility decide between collaboration and human ownership (M-09)', () => {
+  assertIncludes(textOf(section('values')), 'That is, while there is value in the items on the right, we value the items on the left more. Where autonomous collaboration and human ownership pull apart, consequence and reversibility decide: preferring collaboration to approval queues never removes the named human owner a high-consequence decision requires.');
+});
