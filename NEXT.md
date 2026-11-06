@@ -1,5 +1,9 @@
 # Unreleased
 
+- Label the site Edition 02 and link the status note's evidence to a public summary of the two Architecture Review Boards behind it (`docs/decisions/edition-02.md`).
+
+- Apply the owner-ratified Edition 02 wording to the values, principles, Contracts section, and README, and add a dated verJSON status note (Architecture Review Board, ratified 2026-11-05).
+
 - Restore the manifesto asterisk as the browser tab icon.
 
 - Give specification ownership its own principle and number the manifesto from 1 through 13.
