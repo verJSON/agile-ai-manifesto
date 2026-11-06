@@ -127,3 +127,7 @@ test('Principle 07 defines routine and high-consequence work and who may clear e
 test('values note says consequence and reversibility decide between collaboration and human ownership (M-09)', () => {
   assertIncludes(textOf(section('values')), 'That is, while there is value in the items on the right, we value the items on the left more. Where autonomous collaboration and human ownership pull apart, consequence and reversibility decide: preferring collaboration to approval queues never removes the named human owner a high-consequence decision requires.');
 });
+
+test('Principle 06 keeps blocking findings out of the author\'s hands and requires evidenced independence (M-10)', () => {
+  assertIncludes(principle(6), 'No author, human or agent, is the final judge of their own work. A finding is blocking when its reviewer says so, and only the reviewer or someone independent of the author may downgrade or dismiss it; the author may dismiss a non-blocking comment with a stated reason. Independence is shown by evidence, not by a different name: a reviewer acting for the same person as the author is not independent of the author, and the person the author acts for is not independent of the author, separate sessions alone do not show independence or model diversity, shared-model risk is disclosed, and a reviewer whose identity cannot be checked is recorded as unverified.');
+});
