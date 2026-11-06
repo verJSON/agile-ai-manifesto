@@ -339,7 +339,7 @@ test('clicking outside closes the open edition list and returns focus to the dis
 });
 
 test('edition routes that no manifest entry names return 404', async () => {
-  for (const path of ['/editions/99/', '/editions/']) {
+  for (const path of ['/editions/99/', '/editions/99', '/editions/']) {
     assert.equal((await worker.fetch(new Request(`https://agileaimanifesto.org${path}`))).status, 404, path);
   }
 });
@@ -454,4 +454,12 @@ test('the build reads each edition from editions/NN.html, and only after the man
   read.length = 0;
   assert.throws(() => render([{ number: '02', year: 2026, status: 'current' }, { number: '1', year: 2026, status: 'archived' }]), /must be two digits/);
   assert.deepEqual(read, [], 'content was read before the manifest validated');
+});
+
+test('a known edition route without its trailing slash redirects permanently to the slashed route', async () => {
+  for (const edition of editions) {
+    const response = await worker.fetch(new Request(`https://agileaimanifesto.org/editions/${edition.number}?ref=citation`));
+    assert.equal(response.status, 308, `/editions/${edition.number}`);
+    assert.equal(response.headers.get('location'), `https://agileaimanifesto.org/editions/${edition.number}/?ref=citation`);
+  }
 });
