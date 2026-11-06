@@ -197,7 +197,7 @@ test('the hero edition list links editions newest first and marks the current ed
 test('each edition link opens a page carrying that edition\'s manifesto text', async () => {
   for (const link of editionList(page).links) {
     const edition = editions.find((candidate) => candidate.number === link.label);
-    const content = readFileSync(new URL(`../${edition.source}`, import.meta.url), 'utf8').trim();
+    const content = readFileSync(new URL(`../editions/${edition.number}.html`, import.meta.url), 'utf8').trim();
     const response = await worker.fetch(new Request(`https://agileaimanifesto.org${link.target}`));
     assert.equal(response.status, 200, `${link.target} returned ${response.status}`);
     assert.ok((await response.text()).includes(content), `${link.target} does not carry Edition ${edition.number}'s text`);
@@ -405,41 +405,53 @@ const renderFixture = (entries) => renderPages({
   template: fixtureTemplate,
   css: '',
   manifest: { editions: entries },
-  contents: Object.fromEntries(entries.map((entry) => [entry.number, `<p>Edition ${entry.number}</p>`])),
+  readContent: (path) => `<p>${path}</p>`,
 });
 
 test('the build rejects a manifest without exactly one current edition', () => {
   assert.throws(() => renderFixture([
-    { number: '02', year: 2026, source: 'editions/02.html', status: 'archived' },
-    { number: '01', year: 2026, source: 'editions/01.html', status: 'archived' },
+    { number: '02', year: 2026, status: 'archived' },
+    { number: '01', year: 2026, status: 'archived' },
   ]), /exactly one current edition, found 0/);
   assert.throws(() => renderFixture([
-    { number: '02', year: 2026, source: 'editions/02.html', status: 'current' },
-    { number: '01', year: 2026, source: 'editions/01.html', status: 'current' },
+    { number: '02', year: 2026, status: 'current' },
+    { number: '01', year: 2026, status: 'current' },
   ]), /exactly one current edition, found 2/);
 });
 
 test('the build rejects a manifest that repeats an edition number', () => {
   assert.throws(() => renderFixture([
-    { number: '01', year: 2026, source: 'editions/02.html', status: 'current' },
-    { number: '01', year: 2026, source: 'editions/01.html', status: 'archived' },
+    { number: '01', year: 2026, status: 'current' },
+    { number: '01', year: 2026, status: 'archived' },
   ]), /Edition 01 is listed more than once/);
 });
 
 test('the build rejects a malformed edition entry', () => {
-  const current = { number: '02', year: 2026, source: 'editions/02.html', status: 'current' };
+  const current = { number: '02', year: 2026, status: 'current' };
   const cases = [
-    [{ number: '1', year: 2026, source: 'editions/01.html', status: 'archived' }, /number "1" must be two digits/],
-    [{ number: '01', year: 2026, source: 'editions/01.html', status: 'retired' }, /Edition 01 has unknown status "retired"/],
-    [{ number: '01', year: '2026', source: 'editions/01.html', status: 'archived' }, /Edition 01 year must be an integer/],
+    [{ number: '1', year: 2026, status: 'archived' }, /number "1" must be two digits/],
+    [{ number: '01', year: 2026, status: 'retired' }, /Edition 01 has unknown status "retired"/],
+    [{ number: '01', year: '2026', status: 'archived' }, /Edition 01 year must be an integer/],
+    [{ number: '01', year: 2026, status: 'archived', source: 'editions/other.html' }, /Edition 01 has unknown field "source"/],
   ];
   for (const [entry, reason] of cases) assert.throws(() => renderFixture([current, entry]), reason);
 });
 
 test('the edition list is newest first even when the manifest lists editions oldest first', () => {
   const pages = renderFixture([
-    { number: '01', year: 2026, source: 'editions/01.html', status: 'archived' },
-    { number: '02', year: 2026, source: 'editions/02.html', status: 'current' },
+    { number: '01', year: 2026, status: 'archived' },
+    { number: '02', year: 2026, status: 'current' },
   ]);
   assert.deepEqual(editionList(pages['/']).links.map((link) => link.label), ['02', '01']);
+});
+
+test('the build reads each edition from editions/NN.html, and only after the manifest validates', () => {
+  const read = [];
+  const readContent = (path) => { read.push(path); return `<p>${path}</p>`; };
+  const render = (entries) => renderPages({ template: fixtureTemplate, css: '', manifest: { editions: entries }, readContent });
+  render([{ number: '02', year: 2026, status: 'current' }, { number: '01', year: 2026, status: 'archived' }]);
+  assert.deepEqual(read.toSorted(), ['editions/01.html', 'editions/02.html']);
+  read.length = 0;
+  assert.throws(() => render([{ number: '02', year: 2026, status: 'current' }, { number: '1', year: 2026, status: 'archived' }]), /must be two digits/);
+  assert.deepEqual(read, [], 'content was read before the manifest validated');
 });
