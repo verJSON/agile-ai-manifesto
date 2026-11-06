@@ -515,3 +515,12 @@ test('the disclosure button is named for the edition it shows, with the word Edi
   assert.ok(rule, 'the stylesheet defines no .visually-hidden rule');
   for (const declaration of ['position:absolute', 'width:1px', 'height:1px', 'overflow:hidden', 'clip-path:inset(50%)', 'white-space:nowrap']) assertIncludes(rule, declaration);
 });
+
+test('the edition list closes when focus leaves the picker and stays open while focus moves within it', () => {
+  const { document, toggle, list, links, dispatch } = runPageScripts(page);
+  dispatch(toggle, 'click');
+  dispatch(toggle, 'focusout', { relatedTarget: links[0] });
+  assert.equal(list.hidden, false, 'moving focus within the picker closed the list');
+  dispatch(links.at(-1), 'focusout', { relatedTarget: document.body });
+  assert.deepEqual([list.hidden, toggle.getAttribute('aria-expanded')], [true, 'false'], 'focus leaving the picker does not close the list');
+});

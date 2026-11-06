@@ -62,6 +62,7 @@
     toggle.hidden = false;
     setOpen(false);
     toggle.addEventListener('click', () => setOpen(list.hidden));
+    toggle.parentElement.addEventListener('focusout', (event) => { if (!toggle.parentElement.contains(event.relatedTarget)) setOpen(false); });
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !list.hidden) close(); });
     document.addEventListener('click', (event) => { if (!list.hidden && !toggle.parentElement.contains(event.target)) setOpen(false); });
   })();
