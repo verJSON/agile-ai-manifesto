@@ -50,6 +50,9 @@ function editionList(markup) {
   return { attributes: list[1], links };
 }
 
+const withoutUnseenText = (markup) => markup.replace(/<span (aria-hidden="true"|class="visually-hidden")>[\s\S]*?<\/span>/g, '');
+const withoutAriaHidden = (markup) => markup.replace(/<span aria-hidden="true">[\s\S]*?<\/span>/g, '');
+
 function editionToggle(markup) {
   const toggle = editionLabel(markup).match(/<button ([^>]*)>([\s\S]*?)<\/button>/);
   assert.ok(toggle, 'the hero edition label has no disclosure button');
@@ -184,7 +187,7 @@ test('on every route each in-page anchor resolves to exactly one element and no 
 });
 
 test('the hero label reads EDITION 02 · 2026 once the edition list is collapsed', () => {
-  const collapsed = editionLabel(page).replace(/<ul\b[\s\S]*?<\/ul>/, '').replace(/<span aria-hidden="true">[\s\S]*?<\/span>/g, '');
+  const collapsed = withoutUnseenText(editionLabel(page).replace(/<ul\b[\s\S]*?<\/ul>/, ''));
   assert.equal(textOf(collapsed), 'EDITION 02 · 2026');
 });
 
@@ -242,7 +245,7 @@ test('the edition picker is a disclosure button showing the current edition, not
   assert.match(attributes, /\btype="button"/);
   assert.match(attributes, /\baria-expanded="false"/);
   assert.match(attributes, new RegExp(`\\baria-controls="${listId}"`));
-  assert.equal(textOf(content.replace(/<span aria-hidden="true">[\s\S]*?<\/span>/g, '')), currentEdition.number);
+  assert.equal(textOf(withoutUnseenText(content)), currentEdition.number);
   assert.doesNotMatch(page, /<select\b/);
 });
 
@@ -501,4 +504,14 @@ test('no media query hides the edition picker', () => {
     }
   }
   assert.deepEqual(hidden, [], 'a media query hides the edition picker');
+});
+
+test('the disclosure button is named for the edition it shows, with the word Edition visually hidden', () => {
+  const { content } = editionToggle(page);
+  assert.equal(textOf(withoutAriaHidden(content)), `Edition ${currentEdition.number}`);
+  assert.match(content, /<span class="visually-hidden">Edition <\/span>/);
+  const css = readFileSync(new URL('../public/styles.css', import.meta.url), 'utf8');
+  const rule = css.match(/(?:^|\})\.visually-hidden\{([^}]*)\}/)?.[1];
+  assert.ok(rule, 'the stylesheet defines no .visually-hidden rule');
+  for (const declaration of ['position:absolute', 'width:1px', 'height:1px', 'overflow:hidden', 'clip-path:inset(50%)', 'white-space:nowrap']) assertIncludes(rule, declaration);
 });

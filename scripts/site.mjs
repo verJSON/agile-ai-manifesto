@@ -16,7 +16,7 @@ function editionLabel(editions, shown) {
     .map((edition) => `<li><a href="${targetOf(edition)}"${edition === shown ? ' aria-current="page"' : ''}>${edition.number}</a></li>`)
     .join('');
   // The list is visible by default so it works without JavaScript; the page script collapses it behind the button.
-  const toggle = `<button type="button" class="edition-toggle" aria-expanded="false" aria-controls="edition-list" hidden>${shown.number}<span aria-hidden="true"> ▾</span></button>`;
+  const toggle = `<button type="button" class="edition-toggle" aria-expanded="false" aria-controls="edition-list" hidden><span class="visually-hidden">Edition </span>${shown.number}<span aria-hidden="true"> ▾</span></button>`;
   return `<div class="edition">EDITION <nav class="edition-picker" aria-label="Manifesto edition">${toggle}<ul id="edition-list" class="edition-list">${links}</ul></nav> &nbsp;·&nbsp; ${shown.year}</div>`;
 }
 
