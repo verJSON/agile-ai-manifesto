@@ -49,6 +49,7 @@ export function renderPages({ template, css, manifest, readContent }) {
     const title = edition === current ? SITE_TITLE : `Edition ${edition.number} · ${SITE_TITLE}`;
     let page = fill(styled, '<!-- PAGE_TITLE -->', title, 3);
     page = fill(page, '<!-- EDITION_CANONICAL -->', canonical(edition));
+    page = fill(page, '<!-- HOME_HREF -->', edition === current ? '#top' : '/', 2);
     page = fill(page, '<!-- EDITION_NOTICE -->', notice(edition));
     page = fill(page, '<!-- EDITION_LABEL -->', editionLabel(editions, edition));
     return fill(page, '<!-- EDITION_CONTENT -->', contents.get(edition));

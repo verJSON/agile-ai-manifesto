@@ -401,7 +401,7 @@ test('the page loads the Microsoft Clarity tag for project z9fo05sbg6 once, in t
   assert.equal(page.match(/clarity\.ms\/tag\//g)?.length, 1, 'expected exactly one Clarity tag');
 });
 
-const fixtureTemplate = '<head><title><!-- PAGE_TITLE --></title><meta property="og:title" content="<!-- PAGE_TITLE -->"><meta name="twitter:title" content="<!-- PAGE_TITLE -->"><!-- EDITION_CANONICAL --><style>/* SITE_STYLES */</style></head><main><!-- EDITION_NOTICE --><!-- EDITION_LABEL --><!-- EDITION_CONTENT --></main>';
+const fixtureTemplate = '<head><title><!-- PAGE_TITLE --></title><meta property="og:title" content="<!-- PAGE_TITLE -->"><meta name="twitter:title" content="<!-- PAGE_TITLE -->"><!-- EDITION_CANONICAL --><style>/* SITE_STYLES */</style></head><main><a class="wordmark" href="<!-- HOME_HREF -->"></a><a class="wordmark" href="<!-- HOME_HREF -->"></a><!-- EDITION_NOTICE --><!-- EDITION_LABEL --><!-- EDITION_CONTENT --></main>';
 const renderFixture = (entries) => renderPages({
   template: fixtureTemplate,
   css: '',
@@ -476,5 +476,14 @@ test('archived editions carry their own page, Open Graph and Twitter titles; the
       [...head.matchAll(/<meta name="twitter:title" content="([^"]*)">/g)].map((match) => match[1]),
     ];
     assert.deepEqual(titles, [[expected], [expected], [expected]], `${path} titles (page, og, twitter)`);
+  }
+});
+
+test('on archived editions the header and footer wordmarks lead to the current edition at the root', async () => {
+  const routes = [['/', currentEdition], ...editions.map((edition) => [`/editions/${edition.number}/`, edition])];
+  for (const [path, edition] of routes) {
+    const markup = await (await worker.fetch(new Request(`https://agileaimanifesto.org${path}`))).text();
+    const wordmarks = [...markup.matchAll(/<a class="wordmark" href="([^"]*)"/g)].map((match) => match[1]);
+    assert.deepEqual(wordmarks, edition === currentEdition ? ['#top', '#top'] : ['/', '/'], `${path} wordmark links`);
   }
 });
