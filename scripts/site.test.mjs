@@ -154,3 +154,8 @@ test('every in-page anchor resolves to exactly one element and no id repeats', (
   assert.ok(targets.length > 0, 'expected in-page anchors');
   assert.deepEqual(targets.filter((target) => !ids.includes(target)), [], 'anchors without a target');
 });
+
+test('the page carries the Edition 02 label and no Edition 01 label', () => {
+  assertIncludes(page, '<p class="edition">EDITION 02 &nbsp;·&nbsp; 2026</p>');
+  assert.doesNotMatch(page, /EDITION 01/);
+});
