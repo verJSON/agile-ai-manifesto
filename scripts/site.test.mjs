@@ -109,3 +109,9 @@ test('README points to the site status note and repeats that a direction does no
 test('Principle 05 says what makes an identity distinct and authority scoped (M-05)', () => {
   assertIncludes(principle(5), 'Equip agents with context, tools, distinct identities, and scoped authority to investigate, implement, review, decide, and merge work within the policies that govern them. An identity is distinct when an issuer other than the agent binds the agent run to the person or system it acts for, records the model it runs on as verified or unverified, and others can check it. Authority is scoped when it is limited to named actions and enforced where the action happens. A session label, a commit trailer, or a prompt instruction does not establish identity, and a credential the agent can merely reach is not delegated authority, even if it works; limit what it can do where the action happens.');
 });
+
+test('Principle 09 says who vouches for an attestation and that a self-report is a claim (M-06)', () => {
+  const text = principle(9);
+  assertIncludes(text, 'Make claims about identity, authority, provenance, and outcomes verifiable with signed attestations from an issuer that whoever relies on them trusts independently of the message. A signature shows who vouched for a claim, not that the action was permitted or that the outcome happened. Check a new action against current authority, a past action against the authority that applied when it was taken, and an outcome against evidence. What an actor, or the tooling that runs it, reports about itself, including a reviewing model\'s name, is a claim, not an attestation. Record what cannot be verified as unverified, keeping what was observed.');
+  assertExcludes(text, 'Use signed attestations to make claims');
+});
