@@ -1,6 +1,6 @@
 # Unreleased
 
-- Apply the owner-ratified Edition 02 wording to the values, principles, Contracts section, and README, and add a dated verJSON status note (Architecture Review Board slate cc07abf1, ratified 2026-11-05).
+- Apply the owner-ratified Edition 02 wording to the values, principles, Contracts section, and README, and add a dated verJSON status note (Architecture Review Board, ratified 2026-11-05).
 
 - Restore the manifesto asterisk as the browser tab icon.
 
