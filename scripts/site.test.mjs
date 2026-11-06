@@ -88,9 +88,12 @@ test('Contracts section drops the undated progress hedge and says a direction do
 });
 
 test('a dated, owned status note set apart from the principles and Contracts body reports verJSON progress (M-03)', () => {
-  const notes = [...page.matchAll(/<(\w+) id="status"[^>]*>([\s\S]*?)<\/\1>/g)];
+  const notes = [...page.matchAll(/<(\w+) id="status"([^>]*)>([\s\S]*?)<\/\1>/g)];
   assert.equal(notes.length, 1, 'expected exactly one status note');
-  assert.equal(textOf(notes[0][2]), "verJSON status, as of 2026-11-05. Owner: the repository owner. Reviewed every six months; if a review is missed, treat this note as unconfirmed. Defined: versioned agent-message contracts for leg results and a prose fallback. In force: none yet; they take effect only when their conformance checks pass and adoption is recorded. Demonstrated in operation: none yet. Not yet covered: contracts for intent, decisions, and evidence, and a complete inter-agent protocol. Evidence: the repository owner's 2026-11-05 ratification of the architecture review of verJSON's own alignment with Edition 01.");
+  const [, element, attributes, body] = notes[0];
+  assert.equal(element, 'section', 'the status note must be a named region inside main, not a complementary landmark');
+  assert.match(attributes, /\saria-label="verJSON status note"/);
+  assert.equal(textOf(body), "verJSON status, as of 2026-11-05. Owner: the repository owner. Reviewed every six months; if a review is missed, treat this note as unconfirmed. Defined: versioned agent-message contracts for leg results and a prose fallback. In force: none yet; they take effect only when their conformance checks pass and adoption is recorded. Demonstrated in operation: none yet. Not yet covered: contracts for intent, decisions, and evidence, and a complete inter-agent protocol. Evidence: the repository owner's 2026-11-05 ratification of the architecture review of verJSON's own alignment with Edition 01.");
   assertExcludes(section('contracts'), 'id="status"');
   assertExcludes(section('principles'), 'id="status"');
 });
