@@ -119,3 +119,7 @@ test('Principle 09 says who vouches for an attestation and that a self-report is
 test('Principle 09 says the named human owner decides the known recommendation before it takes effect (M-07)', () => {
   assertIncludes(principle(9), 'High-consequence decisions must have a named human owner, who accepts, rejects, or returns the specific recommendation once it is known and before it takes effect. Agreeing in advance to follow a recommendation is delegation, not ownership of the decision.');
 });
+
+test('Principle 07 defines routine and high-consequence work and who may clear each (M-08)', () => {
+  assertIncludes(principle(7), 'Replace routine approval queues with evidence-driven evaluation. The consequences and reversibility of a change determine the scrutiny it receives and who may clear it; some evidence takes time to obtain. Routine work is reversible, and evidence shows its failure is bounded and cheap to detect and undo; an independent reviewer, human or agent, can clear it. Work is high-consequence when it is hard to reverse, when security, legal, or customer harm could occur before it can be detected and undone, or when it widens who may act or weakens or removes a required check; its named human owner decides it. Passing checks do not by themselves make work routine. When the class is uncertain, treat the work as high-consequence.');
+});
