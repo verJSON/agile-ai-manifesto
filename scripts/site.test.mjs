@@ -115,3 +115,7 @@ test('Principle 09 says who vouches for an attestation and that a self-report is
   assertIncludes(text, 'Make claims about identity, authority, provenance, and outcomes verifiable with signed attestations from an issuer that whoever relies on them trusts independently of the message. A signature shows who vouched for a claim, not that the action was permitted or that the outcome happened. Check a new action against current authority, a past action against the authority that applied when it was taken, and an outcome against evidence. What an actor, or the tooling that runs it, reports about itself, including a reviewing model\'s name, is a claim, not an attestation. Record what cannot be verified as unverified, keeping what was observed.');
   assertExcludes(text, 'Use signed attestations to make claims');
 });
+
+test('Principle 09 says the named human owner decides the known recommendation before it takes effect (M-07)', () => {
+  assertIncludes(principle(9), 'High-consequence decisions must have a named human owner, who accepts, rejects, or returns the specific recommendation once it is known and before it takes effect. Agreeing in advance to follow a recommendation is delegation, not ownership of the decision.');
+});
