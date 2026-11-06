@@ -487,3 +487,18 @@ test('on archived editions the header and footer wordmarks lead to the current e
     assert.deepEqual(wordmarks, edition === currentEdition ? ['#top', '#top'] : ['/', '/'], `${path} wordmark links`);
   }
 });
+
+test('no media query hides the edition picker', () => {
+  const css = readFileSync(new URL('../public/styles.css', import.meta.url), 'utf8');
+  const hidden = [];
+  for (const media of css.matchAll(/@media[^{]*\{/g)) {
+    let end = media.index + media[0].length;
+    for (let depth = 1; depth > 0; end += 1) depth += { '{': 1, '}': -1 }[css[end]] ?? 0;
+    const block = css.slice(media.index + media[0].length, end - 1);
+    for (const [, selectors, declarations] of block.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const picker = selectors.split(',').filter((selector) => /\.edition(-picker|-toggle|-list)?(?![\w-]|\[hidden\])/.test(selector));
+      if (picker.length > 0 && /display:\s*none|visibility:\s*hidden/.test(declarations)) hidden.push(`${media[0]} ${picker.join(',')}{${declarations}}`);
+    }
+  }
+  assert.deepEqual(hidden, [], 'a media query hides the edition picker');
+});
