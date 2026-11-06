@@ -1,5 +1,7 @@
 # Unreleased
 
+- Make the hero's edition number a dropdown of every edition, newest first, and serve each edition at `/editions/NN/` (Edition 01 as published at 3aa4ed3) from one manifest, `editions/editions.json`.
+
 - Load the Microsoft Clarity tag (project `z9fo05sbg6`) in the page head to observe visitor sessions and activity.
 
 - Label the site Edition 02 and link the status note's evidence to a public summary of the two Architecture Review Boards behind it (`docs/decisions/edition-02.md`).

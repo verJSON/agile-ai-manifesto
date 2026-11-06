@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import vm from 'node:vm';
+import { renderPages } from './site.mjs';
 
 execFileSync(process.execPath, ['scripts/build.mjs']);
 const { default: worker } = await import('../.build/worker.mjs');
@@ -29,6 +31,22 @@ function assertIncludes(text, expected) {
 
 function assertExcludes(text, unexpected) {
   assert.ok(!text.includes(unexpected), `expected text not to include:\n  ${unexpected}`);
+}
+
+const { editions } = JSON.parse(readFileSync(new URL('../editions/editions.json', import.meta.url), 'utf8'));
+const currentEdition = editions.find((edition) => edition.status === 'current');
+
+function editionLabel(markup) {
+  const match = markup.match(/<p class="edition">([\s\S]*?)<\/p>/);
+  assert.ok(match, 'the hero edition label is missing');
+  return match[1];
+}
+
+function editionOptions(markup) {
+  const select = editionLabel(markup).match(/<select\b[^>]*>([\s\S]*?)<\/select>/);
+  assert.ok(select, 'the hero edition label has no edition selector');
+  return [...select[1].matchAll(/<option value="([^"]*)"( selected)?>([^<]*)<\/option>/g)]
+    .map(([, target, selected, label]) => ({ target, selected: Boolean(selected), label }));
 }
 
 test('homepage serves the manifesto', async () => {
@@ -147,17 +165,139 @@ test('Principle 12 judges against a baseline and counts token savings only on a 
   assert.doesNotMatch(text, /\b[A-Z]{2,}\b/, 'Principle 12 must carry no all-caps emphasis');
 });
 
-test('every in-page anchor resolves to exactly one element and no id repeats', () => {
-  const ids = [...page.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(ids.filter((id, index) => ids.indexOf(id) !== index), [], 'duplicate ids');
-  const targets = [...page.matchAll(/\shref="#([^"]*)"/g)].map((match) => match[1]);
-  assert.ok(targets.length > 0, 'expected in-page anchors');
-  assert.deepEqual(targets.filter((target) => !ids.includes(target)), [], 'anchors without a target');
+test('on every route each in-page anchor resolves to exactly one element and no id repeats', async () => {
+  for (const path of ['/', ...editions.map((edition) => `/editions/${edition.number}/`)]) {
+    const markup = await (await worker.fetch(new Request(`https://agileaimanifesto.org${path}`))).text();
+    const ids = [...markup.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
+    assert.deepEqual(ids.filter((id, index) => ids.indexOf(id) !== index), [], `${path}: duplicate ids`);
+    const targets = [...markup.matchAll(/\shref="#([^"]*)"/g)].map((match) => match[1]);
+    assert.ok(targets.length > 0, `${path}: expected in-page anchors`);
+    assert.deepEqual(targets.filter((target) => !ids.includes(target)), [], `${path}: anchors without a target`);
+  }
 });
 
 test('the page carries the Edition 02 label and no Edition 01 label', () => {
-  assertIncludes(page, '<p class="edition">EDITION 02 &nbsp;·&nbsp; 2026</p>');
+  const controls = /<select\b[\s\S]*?<\/select>(<noscript>[\s\S]*?<\/noscript>)?/;
+  assert.equal(editionLabel(page).replace(controls, '{selector}'), 'EDITION {selector} &nbsp;·&nbsp; 2026');
+  assert.deepEqual(editionOptions(page).filter((option) => option.selected).map((option) => option.label), ['02']);
   assert.doesNotMatch(page, /EDITION 01/);
+});
+
+test('the hero edition selector lists editions newest first with the current edition selected', () => {
+  const options = editionOptions(page);
+  assert.deepEqual(options.map((option) => option.label), editions.map((edition) => edition.number).sort().reverse());
+  assert.deepEqual(options.filter((option) => option.selected).map((option) => option.label), [currentEdition.number]);
+});
+
+test('each edition selector option opens a page carrying that edition\'s manifesto text', async () => {
+  for (const option of editionOptions(page)) {
+    const edition = editions.find((candidate) => candidate.number === option.label);
+    const content = readFileSync(new URL(`../${edition.source}`, import.meta.url), 'utf8').trim();
+    const response = await worker.fetch(new Request(`https://agileaimanifesto.org${option.target}`));
+    assert.equal(response.status, 200, `${option.target} returned ${response.status}`);
+    assert.ok((await response.text()).includes(content), `${option.target} does not carry Edition ${edition.number}'s text`);
+  }
+  const editionOne = await (await worker.fetch(new Request('https://agileaimanifesto.org/editions/01/'))).text();
+  assertIncludes(textOf(editionOne), 'Versioned JSON schemas can give agents and system tiers a shared contract for intent, decisions, and evidence.');
+});
+
+test('archived editions tell the reader which edition is current and link to it; the current edition does not', async () => {
+  const noticeOf = (markup) => markup.match(/<p class="edition-notice">([\s\S]*?)<\/p>/)?.[1];
+  for (const edition of editions) {
+    const notice = noticeOf(await (await worker.fetch(new Request(`https://agileaimanifesto.org/editions/${edition.number}/`))).text());
+    if (edition === currentEdition) {
+      assert.equal(notice, undefined, `the current edition's archive route shows an archive notice`);
+      continue;
+    }
+    assert.ok(notice, `Edition ${edition.number} has no archive notice`);
+    assert.equal(textOf(notice), `You are reading Edition ${edition.number}. The current edition is Edition ${currentEdition.number}.`);
+    assert.match(notice, new RegExp(`<a href="/">Edition ${currentEdition.number}</a>`));
+  }
+  assert.equal(noticeOf(page), undefined, 'the current edition shows an archive notice');
+});
+
+test('archived editions are canonical at their own URL and the current edition is canonical at the root', async () => {
+  const origin = 'https://agileaimanifesto.org';
+  const routes = [['/', `${origin}/`], ...editions.map((edition) => [`/editions/${edition.number}/`,
+    edition === currentEdition ? `${origin}/` : `${origin}/editions/${edition.number}/`])];
+  for (const [path, canonical] of routes) {
+    const [, head] = (await (await worker.fetch(new Request(`${origin}${path}`))).text()).match(/<head>([\s\S]*?)<\/head>/);
+    assert.deepEqual([...head.matchAll(/<link rel="canonical" href="([^"]*)">/g)].map((match) => match[1]), [canonical], `${path} canonical`);
+  }
+});
+
+test('without JavaScript the hero label links to every edition the selector offers', () => {
+  const fallback = editionLabel(page).match(/<noscript>([\s\S]*?)<\/noscript>/);
+  assert.ok(fallback, 'the hero edition label has no no-JavaScript fallback');
+  const links = [...fallback[1].matchAll(/<a href="([^"]*)"( aria-current="page")?>([^<]*)<\/a>/g)]
+    .map(([, target, current, label]) => ({ target, selected: Boolean(current), label }));
+  assert.deepEqual(links, editionOptions(page));
+});
+
+test('the edition selector is a native select named "Manifesto edition"', () => {
+  assert.match(editionLabel(page), /<select [^>]*\baria-label="Manifesto edition"[^>]*>/);
+});
+
+// Runs the page's inline body scripts against a minimal stand-in for the edition <select>,
+// built from the page's own options, so browser behavior is testable without a DOM dependency.
+function runPageScripts(markup) {
+  const [, body] = markup.match(/<body>([\s\S]*?)<\/body>/);
+  const scripts = [...body.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
+  assert.ok(scripts.length > 0, 'the page body has no inline script');
+  const on = (listeners) => (type, listener) => { listeners[type] = listener; };
+  const options = editionOptions(markup).map(({ target, selected }) => ({ value: target, selected, defaultSelected: selected }));
+  const selectListeners = {};
+  const select = {
+    options,
+    get value() { return options.find((option) => option.selected)?.value ?? ''; },
+    set value(target) { for (const option of options) option.selected = option.value === target; },
+    get selectedIndex() { return options.findIndex((option) => option.selected); },
+    set selectedIndex(index) { options.forEach((option, position) => { option.selected = position === index; }); },
+    addEventListener: on(selectListeners),
+  };
+  const visited = [];
+  const windowListeners = {};
+  const location = { assign: (target) => visited.push(target), set href(target) { visited.push(target); } };
+  const document = { querySelector: () => select, querySelectorAll: () => [select], getElementById: () => select };
+  const context = vm.createContext({ document, location, addEventListener: on(windowListeners) });
+  context.window = context;
+  for (const script of scripts) vm.runInContext(script, context);
+  return { select, selectListeners, windowListeners, visited };
+}
+
+test('choosing an edition in the selector navigates to that edition', () => {
+  const { select, selectListeners, visited } = runPageScripts(page);
+  assert.equal(typeof selectListeners.change, 'function', 'no change listener is attached to the edition selector');
+  select.value = '/editions/01/';
+  selectListeners.change({ target: select, currentTarget: select });
+  assert.deepEqual(visited, ['/editions/01/']);
+});
+
+test('returning to a page from history resets the selector to that page\'s edition', () => {
+  const { select, windowListeners } = runPageScripts(page);
+  select.value = '/editions/01/';
+  assert.equal(typeof windowListeners.pageshow, 'function', 'nothing resets the selector when the page is shown again');
+  windowListeners.pageshow({ persisted: true });
+  assert.equal(select.value, '/');
+});
+
+test('edition routes that no manifest entry names return 404', async () => {
+  for (const path of ['/editions/99/', '/editions/']) {
+    assert.equal((await worker.fetch(new Request(`https://agileaimanifesto.org${path}`))).status, 404, path);
+  }
+});
+
+test('the current edition\'s archive route serves the same page as the root', async () => {
+  const archived = await (await worker.fetch(new Request(`https://agileaimanifesto.org/editions/${currentEdition.number}/`))).text();
+  assert.ok(archived === page, `/editions/${currentEdition.number}/ differs from /`);
+});
+
+test('every edition route keeps the site head, differing only in its canonical link', async () => {
+  const headOf = (markup) => markup.match(/<head>([\s\S]*?)<\/head>/)[1].replace(/<link rel="canonical" href="[^"]*">/, '');
+  for (const edition of editions) {
+    const markup = await (await worker.fetch(new Request(`https://agileaimanifesto.org/editions/${edition.number}/`))).text();
+    assert.ok(headOf(markup) === headOf(page), `Edition ${edition.number}'s head differs from the site head`);
+  }
 });
 
 test('the status note links its evidence sentence to the public decision summary', () => {
@@ -201,4 +341,40 @@ test('the page loads the Microsoft Clarity tag for project z9fo05sbg6 once, in t
   assertIncludes(head, '"https://www.clarity.ms/tag/"+i');
   assertIncludes(head, '(window, document, "clarity", "script", "z9fo05sbg6")');
   assert.equal(page.match(/clarity\.ms\/tag\//g)?.length, 1, 'expected exactly one Clarity tag');
+});
+
+const fixtureTemplate = '<head><!-- EDITION_CANONICAL --><style>/* SITE_STYLES */</style></head><main><!-- EDITION_NOTICE --><!-- EDITION_LABEL --><!-- EDITION_CONTENT --></main>';
+const renderFixture = (entries) => renderPages({
+  template: fixtureTemplate,
+  css: '',
+  manifest: { editions: entries },
+  contents: Object.fromEntries(entries.map((entry) => [entry.number, `<p>Edition ${entry.number}</p>`])),
+});
+
+test('the build rejects a manifest without exactly one current edition', () => {
+  assert.throws(() => renderFixture([
+    { number: '02', year: 2026, source: 'editions/02.html', status: 'archived' },
+    { number: '01', year: 2026, source: 'editions/01.html', status: 'archived' },
+  ]), /exactly one current edition, found 0/);
+  assert.throws(() => renderFixture([
+    { number: '02', year: 2026, source: 'editions/02.html', status: 'current' },
+    { number: '01', year: 2026, source: 'editions/01.html', status: 'current' },
+  ]), /exactly one current edition, found 2/);
+});
+
+test('the build rejects a manifest that repeats an edition number', () => {
+  assert.throws(() => renderFixture([
+    { number: '01', year: 2026, source: 'editions/02.html', status: 'current' },
+    { number: '01', year: 2026, source: 'editions/01.html', status: 'archived' },
+  ]), /Edition 01 is listed more than once/);
+});
+
+test('the build rejects a malformed edition entry', () => {
+  const current = { number: '02', year: 2026, source: 'editions/02.html', status: 'current' };
+  const cases = [
+    [{ number: '1', year: 2026, source: 'editions/01.html', status: 'archived' }, /number "1" must be two digits/],
+    [{ number: '01', year: 2026, source: 'editions/01.html', status: 'retired' }, /Edition 01 has unknown status "retired"/],
+    [{ number: '01', year: '2026', source: 'editions/01.html', status: 'archived' }, /Edition 01 year must be an integer/],
+  ];
+  for (const [entry, reason] of cases) assert.throws(() => renderFixture([current, entry]), reason);
 });
