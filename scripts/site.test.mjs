@@ -31,7 +31,7 @@ function assertExcludes(text, unexpected) {
   assert.ok(!text.includes(unexpected), `expected text not to include:\n  ${unexpected}`);
 }
 
-test('homepage serves the manifesto and versioned-contracts context', async () => {
+test('homepage serves the manifesto', async () => {
   const response = await worker.fetch(new Request('https://agileaimanifesto.org/'));
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /^text\/html/);
@@ -39,8 +39,6 @@ test('homepage serves the manifesto and versioned-contracts context', async () =
   assert.match(html, /Verified customer outcomes/);
   assert.match(html, /Give agents meaningful autonomy/);
   assert.match(html, /rel="icon" type="image\/svg\+xml" href="data:image\/svg\+xml,[^"]*%E2%9C%B3/);
-  assert.match(html, /https:\/\/verjson\.com\/blog\/versioned-contracts-for-agentic-systems/);
-  assert.match(html, /https:\/\/verjson\.com\/blog\/audit-evidence-for-agentic-actions/);
   assert.deepEqual([...html.matchAll(/<article><span>(\d\d) \/ 13<\/span>/g)].map((match) => Number(match[1])), Array.from({ length: 13 }, (_, index) => index + 1));
   assert.match(html, /<h3>Own the specification\.<\/h3>/);
   assert.doesNotMatch(html, /\/\* SITE_STYLES \*\//);
@@ -144,4 +142,12 @@ test('Principle 12 judges against a baseline and counts token savings only on a 
   const text = principle(12);
   assertIncludes(text, 'Judge the whole outcome against stated goals and a baseline: customer value, quality, latency, operating cost, compute, and the capacity to evaluate and maintain the work. Token efficiency is a means, not a goal. A saving counts only when a recorded comparison shows it improves that whole outcome, for example the same quality at lower cost; an inconclusive comparison is recorded as inconclusive, not as an improvement. A saving never counts when it weakens required verification, traceability, or quality.');
   assert.doesNotMatch(text, /\b[A-Z]{2,}\b/, 'Principle 12 must carry no all-caps emphasis');
+});
+
+test('every in-page anchor resolves to exactly one element and no id repeats', () => {
+  const ids = [...page.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(ids.filter((id, index) => ids.indexOf(id) !== index), [], 'duplicate ids');
+  const targets = [...page.matchAll(/\shref="#([^"]*)"/g)].map((match) => match[1]);
+  assert.ok(targets.length > 0, 'expected in-page anchors');
+  assert.deepEqual(targets.filter((target) => !ids.includes(target)), [], 'anchors without a target');
 });
