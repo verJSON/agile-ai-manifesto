@@ -195,3 +195,10 @@ test('the public decision summary exists and leaks no private repository names o
     for (const pattern of patterns) assert.doesNotMatch(text, pattern, `summary leaks a ${kind}`);
   }
 });
+
+test('the page loads the Microsoft Clarity tag for project z9fo05sbg6 once, in the head', () => {
+  const [, head] = page.match(/<head>([\s\S]*?)<\/head>/);
+  assertIncludes(head, '"https://www.clarity.ms/tag/"+i');
+  assertIncludes(head, '(window, document, "clarity", "script", "z9fo05sbg6")');
+  assert.equal(page.match(/clarity\.ms\/tag\//g)?.length, 1, 'expected exactly one Clarity tag');
+});
