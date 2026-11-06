@@ -37,16 +37,23 @@ const { editions } = JSON.parse(readFileSync(new URL('../editions/editions.json'
 const currentEdition = editions.find((edition) => edition.status === 'current');
 
 function editionLabel(markup) {
-  const match = markup.match(/<p class="edition">([\s\S]*?)<\/p>/);
+  const match = markup.match(/<div class="edition">([\s\S]*?)<\/div>/);
   assert.ok(match, 'the hero edition label is missing');
   return match[1];
 }
 
-function editionOptions(markup) {
-  const select = editionLabel(markup).match(/<select\b[^>]*>([\s\S]*?)<\/select>/);
-  assert.ok(select, 'the hero edition label has no edition selector');
-  return [...select[1].matchAll(/<option value="([^"]*)"( selected)?>([^<]*)<\/option>/g)]
-    .map(([, target, selected, label]) => ({ target, selected: Boolean(selected), label }));
+function editionList(markup) {
+  const list = editionLabel(markup).match(/<ul ([^>]*)>([\s\S]*?)<\/ul>/);
+  assert.ok(list, 'the hero edition label has no list of editions');
+  const links = [...list[2].matchAll(/<a href="([^"]*)"( aria-current="page")?>([^<]*)<\/a>/g)]
+    .map(([, target, current, label]) => ({ target, current: Boolean(current), label }));
+  return { attributes: list[1], links };
+}
+
+function editionToggle(markup) {
+  const toggle = editionLabel(markup).match(/<button ([^>]*)>([\s\S]*?)<\/button>/);
+  assert.ok(toggle, 'the hero edition label has no disclosure button');
+  return { attributes: toggle[1], content: toggle[2] };
 }
 
 test('homepage serves the manifesto', async () => {
@@ -176,26 +183,24 @@ test('on every route each in-page anchor resolves to exactly one element and no 
   }
 });
 
-test('the page carries the Edition 02 label and no Edition 01 label', () => {
-  const controls = /<select\b[\s\S]*?<\/select>(<noscript>[\s\S]*?<\/noscript>)?/;
-  assert.equal(editionLabel(page).replace(controls, '{selector}'), 'EDITION {selector} &nbsp;·&nbsp; 2026');
-  assert.deepEqual(editionOptions(page).filter((option) => option.selected).map((option) => option.label), ['02']);
-  assert.doesNotMatch(page, /EDITION 01/);
+test('the hero label reads EDITION 02 · 2026 once the edition list is collapsed', () => {
+  const collapsed = editionLabel(page).replace(/<ul\b[\s\S]*?<\/ul>/, '').replace(/<span aria-hidden="true">[\s\S]*?<\/span>/g, '');
+  assert.equal(textOf(collapsed), 'EDITION 02 · 2026');
 });
 
-test('the hero edition selector lists editions newest first with the current edition selected', () => {
-  const options = editionOptions(page);
-  assert.deepEqual(options.map((option) => option.label), editions.map((edition) => edition.number).sort().reverse());
-  assert.deepEqual(options.filter((option) => option.selected).map((option) => option.label), [currentEdition.number]);
+test('the hero edition list links editions newest first and marks the current edition', () => {
+  const { links } = editionList(page);
+  assert.deepEqual(links.map((link) => link.label), editions.map((edition) => edition.number).sort().reverse());
+  assert.deepEqual(links.filter((link) => link.current).map((link) => link.label), [currentEdition.number]);
 });
 
-test('each edition selector option opens a page carrying that edition\'s manifesto text', async () => {
-  for (const option of editionOptions(page)) {
-    const edition = editions.find((candidate) => candidate.number === option.label);
+test('each edition link opens a page carrying that edition\'s manifesto text', async () => {
+  for (const link of editionList(page).links) {
+    const edition = editions.find((candidate) => candidate.number === link.label);
     const content = readFileSync(new URL(`../${edition.source}`, import.meta.url), 'utf8').trim();
-    const response = await worker.fetch(new Request(`https://agileaimanifesto.org${option.target}`));
-    assert.equal(response.status, 200, `${option.target} returned ${response.status}`);
-    assert.ok((await response.text()).includes(content), `${option.target} does not carry Edition ${edition.number}'s text`);
+    const response = await worker.fetch(new Request(`https://agileaimanifesto.org${link.target}`));
+    assert.equal(response.status, 200, `${link.target} returned ${response.status}`);
+    assert.ok((await response.text()).includes(content), `${link.target} does not carry Edition ${edition.number}'s text`);
   }
   const editionOne = await (await worker.fetch(new Request('https://agileaimanifesto.org/editions/01/'))).text();
   assertIncludes(textOf(editionOne), 'Versioned JSON schemas can give agents and system tiers a shared contract for intent, decisions, and evidence.');
@@ -226,59 +231,111 @@ test('archived editions are canonical at their own URL and the current edition i
   }
 });
 
-test('without JavaScript the hero label links to every edition the selector offers', () => {
-  const fallback = editionLabel(page).match(/<noscript>([\s\S]*?)<\/noscript>/);
-  assert.ok(fallback, 'the hero edition label has no no-JavaScript fallback');
-  const links = [...fallback[1].matchAll(/<a href="([^"]*)"( aria-current="page")?>([^<]*)<\/a>/g)]
-    .map(([, target, current, label]) => ({ target, selected: Boolean(current), label }));
-  assert.deepEqual(links, editionOptions(page));
+test('the edition picker is a navigation region named "Manifesto edition"', () => {
+  assert.match(editionLabel(page), /^EDITION <nav [^>]*\baria-label="Manifesto edition"[^>]*>[\s\S]*<\/nav>/);
 });
 
-test('the edition selector is a native select named "Manifesto edition"', () => {
-  assert.match(editionLabel(page), /<select [^>]*\baria-label="Manifesto edition"[^>]*>/);
+test('the edition picker is a disclosure button showing the current edition, not a select (WCAG 3.2.2)', () => {
+  const { attributes, content } = editionToggle(page);
+  const listId = editionList(page).attributes.match(/\bid="([^"]+)"/)?.[1];
+  assert.ok(listId, 'the edition list has no id for the button to control');
+  assert.match(attributes, /\btype="button"/);
+  assert.match(attributes, /\baria-expanded="false"/);
+  assert.match(attributes, new RegExp(`\\baria-controls="${listId}"`));
+  assert.equal(textOf(content.replace(/<span aria-hidden="true">[\s\S]*?<\/span>/g, '')), currentEdition.number);
+  assert.doesNotMatch(page, /<select\b/);
 });
 
-// Runs the page's inline body scripts against a minimal stand-in for the edition <select>,
-// built from the page's own options, so browser behavior is testable without a DOM dependency.
+test('without JavaScript the edition list is visible and the disclosure button is hidden', () => {
+  assert.doesNotMatch(editionList(page).attributes, /\bhidden\b/);
+  assert.match(editionToggle(page).attributes, /\bhidden\b/);
+  assert.doesNotMatch(page, /<noscript>/);
+});
+
+// A minimal DOM stand-in for the edition picker, built from the page's own markup, so the
+// disclosure script runs under node:vm without a DOM dependency. Events bubble to the document,
+// as in a browser, so a click on the button also reaches any document-level click handler.
 function runPageScripts(markup) {
   const [, body] = markup.match(/<body>([\s\S]*?)<\/body>/);
   const scripts = [...body.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
   assert.ok(scripts.length > 0, 'the page body has no inline script');
-  const on = (listeners) => (type, listener) => { listeners[type] = listener; };
-  const options = editionOptions(markup).map(({ target, selected }) => ({ value: target, selected, defaultSelected: selected }));
-  const selectListeners = {};
-  const select = {
-    options,
-    get value() { return options.find((option) => option.selected)?.value ?? ''; },
-    set value(target) { for (const option of options) option.selected = option.value === target; },
-    get selectedIndex() { return options.findIndex((option) => option.selected); },
-    set selectedIndex(index) { options.forEach((option, position) => { option.selected = position === index; }); },
-    addEventListener: on(selectListeners),
+  const parseAttributes = (source) => new Map([...source.matchAll(/([\w-]+)(?:="([^"]*)")?/g)].map(([, name, value]) => [name, value ?? '']));
+  const document = { listeners: {}, activeElement: null };
+  const element = (tag, attributes, parentElement) => ({
+    tagName: tag.toUpperCase(), attributes, parentElement, listeners: {},
+    get id() { return this.attributes.get('id') ?? ''; },
+    get hidden() { return this.attributes.has('hidden'); },
+    set hidden(value) { if (value) this.attributes.set('hidden', ''); else this.attributes.delete('hidden'); },
+    getAttribute(name) { return this.attributes.has(name) ? this.attributes.get(name) : null; },
+    setAttribute(name, value) { this.attributes.set(name, String(value)); },
+    removeAttribute(name) { this.attributes.delete(name); },
+    hasAttribute(name) { return this.attributes.has(name); },
+    addEventListener(type, listener) { (this.listeners[type] ??= []).push(listener); },
+    contains(other) { for (let node = other; node; node = node.parentElement) if (node === this) return true; return false; },
+    focus() { document.activeElement = this; },
+  });
+  const body_ = element('body', new Map(), null);
+  const nav = element('nav', parseAttributes(editionLabel(markup).match(/<nav ([^>]*)>/)[1]), body_);
+  const toggle = element('button', parseAttributes(editionToggle(markup).attributes), nav);
+  const list = element('ul', parseAttributes(editionList(markup).attributes), nav);
+  const links = editionList(markup).links.map((link) => element('a', new Map([['href', link.target]]), list));
+  const elements = [nav, toggle, list, ...links];
+  const matches = (candidate, selector) => {
+    const [, tag, id, className, attribute, value] = selector.match(/^([a-z]+)?(?:#([\w-]+))?(?:\.([\w-]+))?(?:\[([\w-]+)(?:="([^"]*)")?\])?$/) ?? [];
+    if (selector === '' || (!tag && !id && !className && !attribute)) return false;
+    return (!tag || candidate.tagName === tag.toUpperCase()) && (!id || candidate.id === id)
+      && (!className || (candidate.getAttribute('class') ?? '').split(/\s+/).includes(className))
+      && (!attribute || (candidate.hasAttribute(attribute) && (value === undefined || candidate.getAttribute(attribute) === value)));
   };
-  const visited = [];
-  const windowListeners = {};
-  const location = { assign: (target) => visited.push(target), set href(target) { visited.push(target); } };
-  const document = { querySelector: () => select, querySelectorAll: () => [select], getElementById: () => select };
-  const context = vm.createContext({ document, location, addEventListener: on(windowListeners) });
+  Object.assign(document, {
+    body: body_,
+    getElementById: (id) => elements.find((candidate) => candidate.id === id) ?? null,
+    querySelector: (selector) => elements.find((candidate) => matches(candidate, selector)) ?? null,
+    addEventListener: (type, listener) => { (document.listeners[type] ??= []).push(listener); },
+  });
+  document.activeElement = body_;
+  const dispatch = (target, type, fields = {}) => {
+    const event = { type, target, ...fields, preventDefault() {} };
+    for (let node = target; node; node = node.parentElement) for (const listener of node.listeners[type] ?? []) listener(event);
+    for (const listener of document.listeners[type] ?? []) listener(event);
+  };
+  const context = vm.createContext({ document, addEventListener: () => {} });
   context.window = context;
   for (const script of scripts) vm.runInContext(script, context);
-  return { select, selectListeners, windowListeners, visited };
+  return { document, toggle, list, links, dispatch };
 }
 
-test('choosing an edition in the selector navigates to that edition', () => {
-  const { select, selectListeners, visited } = runPageScripts(page);
-  assert.equal(typeof selectListeners.change, 'function', 'no change listener is attached to the edition selector');
-  select.value = '/editions/01/';
-  selectListeners.change({ target: select, currentTarget: select });
-  assert.deepEqual(visited, ['/editions/01/']);
+test('with JavaScript the edition list starts collapsed behind a visible disclosure button', () => {
+  const { toggle, list } = runPageScripts(page);
+  assert.equal(toggle.hidden, false, 'the disclosure button stays hidden');
+  assert.equal(list.hidden, true, 'the edition list is not collapsed');
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
 });
 
-test('returning to a page from history resets the selector to that page\'s edition', () => {
-  const { select, windowListeners } = runPageScripts(page);
-  select.value = '/editions/01/';
-  assert.equal(typeof windowListeners.pageshow, 'function', 'nothing resets the selector when the page is shown again');
-  windowListeners.pageshow({ persisted: true });
-  assert.equal(select.value, '/');
+test('the disclosure button opens and closes the edition list', () => {
+  const { toggle, list, dispatch } = runPageScripts(page);
+  dispatch(toggle, 'click');
+  assert.deepEqual([list.hidden, toggle.getAttribute('aria-expanded')], [false, 'true'], 'one click does not open the list');
+  dispatch(toggle, 'click');
+  assert.deepEqual([list.hidden, toggle.getAttribute('aria-expanded')], [true, 'false'], 'a second click does not close the list');
+});
+
+test('Escape closes the open edition list and returns focus to the disclosure button', () => {
+  const { document, toggle, list, links, dispatch } = runPageScripts(page);
+  dispatch(toggle, 'click');
+  links[1].focus();
+  dispatch(links[1], 'keydown', { key: 'Escape' });
+  assert.deepEqual([list.hidden, toggle.getAttribute('aria-expanded')], [true, 'false'], 'Escape does not close the list');
+  assert.equal(document.activeElement, toggle, 'focus does not return to the disclosure button');
+});
+
+test('clicking outside closes the open edition list and returns focus to the disclosure button', () => {
+  const { document, toggle, list, dispatch } = runPageScripts(page);
+  dispatch(toggle, 'click');
+  document.body.focus();
+  dispatch(document.body, 'click');
+  assert.deepEqual([list.hidden, toggle.getAttribute('aria-expanded')], [true, 'false'], 'an outside click does not close the list');
+  assert.equal(document.activeElement, toggle, 'focus does not return to the disclosure button');
 });
 
 test('edition routes that no manifest entry names return 404', async () => {

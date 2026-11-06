@@ -15,7 +15,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>/* SITE_STYLES */</style>
-  <noscript><style>.edition-select{display:none}</style></noscript>
   <script type="text/javascript">
     (function(c,l,a,r,i,t,y){
         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
@@ -54,10 +53,17 @@
 </main>
 <footer class="wrap footer"><div><a class="wordmark" href="#top"><span class="mark" aria-hidden="true">✳</span><span>AGILE AI<br>MANIFESTO</span></a><p>Build with intent. Learn from outcomes.</p></div><div class="footer-links"><span>IN CONVERSATION WITH</span><a href="https://agilemanifesto.org/">The Agile Manifesto ↗</a><a href="https://raceprogramming.com/agentic-agile/">Agentic Agile ↗</a><a href="https://dev.to/remojansen/the-agentic-manifesto-what-should-the-agile-manifesto-look-like-in-the-age-of-ai-3k1g">The Agentic Manifesto ↗</a></div><p class="footer-note">OBSERVE. LEARN.<br>BUILD BETTER.</p></footer>
 <script>
-  const editionSelect = document.querySelector('.edition-select');
-  editionSelect.addEventListener('change', () => location.assign(editionSelect.value));
-  // A page restored from history keeps the edition the reader navigated away to; show this page's own edition again.
-  addEventListener('pageshow', () => { for (const option of editionSelect.options) option.selected = option.defaultSelected; });
+  (() => {
+    const toggle = document.querySelector('.edition-toggle');
+    const list = document.getElementById(toggle.getAttribute('aria-controls'));
+    const setOpen = (open) => { toggle.setAttribute('aria-expanded', String(open)); list.hidden = !open; };
+    const close = () => { setOpen(false); toggle.focus(); };
+    toggle.hidden = false;
+    setOpen(false);
+    toggle.addEventListener('click', () => setOpen(list.hidden));
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !list.hidden) close(); });
+    document.addEventListener('click', (event) => { if (!list.hidden && !toggle.parentElement.contains(event.target)) close(); });
+  })();
 </script>
 </body>
 </html>

@@ -11,13 +11,12 @@ const EDITION_STATUSES = ['current', 'archived'];
 const targetOf = (edition) => (edition.status === 'current' ? '/' : `/editions/${edition.number}/`);
 
 function editionLabel(editions, shown) {
-  const options = editions
-    .map((edition) => `<option value="${targetOf(edition)}"${edition === shown ? ' selected' : ''}>${edition.number}</option>`)
-    .join('');
   const links = editions
-    .map((edition) => `<a href="${targetOf(edition)}"${edition === shown ? ' aria-current="page"' : ''}>${edition.number}</a>`)
-    .join(' ');
-  return `<p class="edition">EDITION <select class="edition-select" aria-label="Manifesto edition">${options}</select><noscript>${links}</noscript> &nbsp;·&nbsp; ${shown.year}</p>`;
+    .map((edition) => `<li><a href="${targetOf(edition)}"${edition === shown ? ' aria-current="page"' : ''}>${edition.number}</a></li>`)
+    .join('');
+  // The list is visible by default so it works without JavaScript; the page script collapses it behind the button.
+  const toggle = `<button type="button" class="edition-toggle" aria-expanded="false" aria-controls="edition-list" hidden>${shown.number}<span aria-hidden="true"> ▾</span></button>`;
+  return `<div class="edition">EDITION <nav class="edition-picker" aria-label="Manifesto edition">${toggle}<ul id="edition-list" class="edition-list">${links}</ul></nav> &nbsp;·&nbsp; ${shown.year}</div>`;
 }
 
 function validateEditions(editions) {
