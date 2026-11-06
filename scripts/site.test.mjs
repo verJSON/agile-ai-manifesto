@@ -536,3 +536,16 @@ test('the edition list closes when focus leaves the picker and stays open while 
   dispatch(links.at(-1), 'focusout', { relatedTarget: document.body });
   assert.deepEqual([list.hidden, toggle.getAttribute('aria-expanded')], [true, 'false'], 'focus leaving the picker does not close the list');
 });
+
+const renderManifest = (manifest) => renderPages({ template: fixtureTemplate, css: '', manifest, readContent: (path) => `<p>${path}</p>` });
+const validEntries = [{ number: '02', year: 2026, status: 'current' }, { number: '01', year: 2026, status: 'archived' }];
+
+test('the build rejects a manifest whose editions are not an array', () => {
+  for (const manifest of [{}, { editions: { '02': validEntries[0] } }, { editions: null }]) {
+    assert.throws(() => renderManifest(manifest), /^Error: The manifest's "editions" must be an array$/, JSON.stringify(manifest));
+  }
+});
+
+test('the build rejects a manifest with an unknown top-level key', () => {
+  assert.throws(() => renderManifest({ editions: validEntries, current: '02' }), /^Error: The manifest has unknown key "current"$/);
+});

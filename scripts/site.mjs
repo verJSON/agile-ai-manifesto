@@ -7,6 +7,7 @@ function fill(html, marker, value, occurrences = 1) {
 const SITE_ORIGIN = 'https://agileaimanifesto.org';
 const SITE_TITLE = 'The Agile AI Manifesto';
 const EDITION_STATUSES = ['current', 'archived'];
+const MANIFEST_KEYS = ['editions'];
 const EDITION_FIELDS = ['number', 'year', 'status'];
 
 const targetOf = (edition) => (edition.status === 'current' ? '/' : `/editions/${edition.number}/`);
@@ -18,6 +19,12 @@ function editionLabel(editions, shown) {
   // The list is visible by default so it works without JavaScript; the page script collapses it behind the button.
   const toggle = `<button type="button" class="edition-toggle" aria-expanded="false" aria-controls="edition-list" hidden><span class="visually-hidden">Edition </span>${shown.number}<span aria-hidden="true"> ▾</span></button>`;
   return `<div class="edition">EDITION <nav class="edition-picker" aria-label="Manifesto edition">${toggle}<ul id="edition-list" class="edition-list">${links}</ul></nav> &nbsp;·&nbsp; ${shown.year}</div>`;
+}
+
+function validateManifest(manifest) {
+  if (!Array.isArray(manifest?.editions)) throw new Error('The manifest\'s "editions" must be an array');
+  const unknown = Object.keys(manifest).find((key) => !MANIFEST_KEYS.includes(key));
+  if (unknown) throw new Error(`The manifest has unknown key ${JSON.stringify(unknown)}`);
 }
 
 function validateEditions(editions) {
@@ -38,6 +45,7 @@ function validateEditions(editions) {
 }
 
 export function renderPages({ template, css, manifest, readContent }) {
+  validateManifest(manifest);
   const editions = [...manifest.editions].sort((a, b) => Number(b.number) - Number(a.number));
   const current = validateEditions(editions);
   const contents = new Map(editions.map((edition) => [edition, readContent(`editions/${edition.number}.html`).trim()]));
