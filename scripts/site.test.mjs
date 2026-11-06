@@ -105,3 +105,7 @@ test('README points to the site status note and repeats that a direction does no
   assertIncludes(page, ' id="status"');
   assertExcludes(text, 'verJSON is building toward them');
 });
+
+test('Principle 05 says what makes an identity distinct and authority scoped (M-05)', () => {
+  assertIncludes(principle(5), 'Equip agents with context, tools, distinct identities, and scoped authority to investigate, implement, review, decide, and merge work within the policies that govern them. An identity is distinct when an issuer other than the agent binds the agent run to the person or system it acts for, records the model it runs on as verified or unverified, and others can check it. Authority is scoped when it is limited to named actions and enforced where the action happens. A session label, a commit trailer, or a prompt instruction does not establish identity, and a credential the agent can merely reach is not delegated authority, even if it works; limit what it can do where the action happens.');
+});
