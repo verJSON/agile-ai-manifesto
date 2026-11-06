@@ -1,5 +1,7 @@
 # Unreleased
 
+- Load the Microsoft Clarity tag (project `z9fo05sbg6`) in the page head to observe visitor sessions and activity.
+
 - Label the site Edition 02 and link the status note's evidence to a public summary of the two Architecture Review Boards behind it (`docs/decisions/edition-02.md`).
 
 - Apply the owner-ratified Edition 02 wording to the values, principles, Contracts section, and README, and add a dated verJSON status note (Architecture Review Board, ratified 2026-11-05).
