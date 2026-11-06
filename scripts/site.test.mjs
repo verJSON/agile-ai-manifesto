@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 execFileSync(process.execPath, ['scripts/build.mjs']);
 const { default: worker } = await import('../.build/worker.mjs');
@@ -94,4 +95,13 @@ test('a dated, owned status note set apart from the principles and Contracts bod
   assert.equal(textOf(notes[0][2]), "verJSON status, as of 2026-11-05. Owner: the repository owner. Reviewed every six months; if a review is missed, treat this note as unconfirmed. Defined: versioned agent-message contracts for leg results and a prose fallback. In force: none yet; they take effect only when their conformance checks pass and adoption is recorded. Demonstrated in operation: none yet. Not yet covered: contracts for intent, decisions, and evidence, and a complete inter-agent protocol. Evidence: the repository owner's 2026-11-05 ratification of the architecture review of verJSON's own alignment with Edition 01.");
   assertExcludes(section('contracts'), 'id="status"');
   assertExcludes(section('principles'), 'id="status"');
+});
+
+test('README points to the site status note and repeats that a direction does not lower the bar (M-04)', () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  const text = readme.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ');
+  assertIncludes(text, 'The manifesto describes how agentic software development should work. verJSON reports its progress in one dated status note on the site, which separates what is defined, what is in force, what is demonstrated in operation and what is not yet covered, and links the evidence. Calling the contract approach a direction does not make a status-only contract into a contract for intent, decisions, and evidence.');
+  assertIncludes(readme, '](https://agileaimanifesto.org/#status)');
+  assertIncludes(page, ' id="status"');
+  assertExcludes(text, 'verJSON is building toward them');
 });
