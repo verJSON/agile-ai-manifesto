@@ -449,14 +449,26 @@ test('the edition list is newest first even when the manifest lists editions old
   assert.deepEqual(editionList(pages['/']).links.map((link) => link.label), ['02', '01']);
 });
 
-test('the build reads each edition from editions/NN.html, and only after the manifest validates', () => {
+function renderRecordingReads(entries) {
   const read = [];
   const readContent = (path) => { read.push(path); return `<p>${path}</p>`; };
-  const render = (entries) => renderPages({ template: fixtureTemplate, css: '', manifest: { editions: entries }, readContent });
-  render([{ number: '02', year: 2026, status: 'current' }, { number: '01', year: 2026, status: 'archived' }]);
+  try {
+    renderPages({ template: fixtureTemplate, css: '', manifest: { editions: entries }, readContent });
+    return { read, error: undefined };
+  } catch (error) {
+    return { read, error };
+  }
+}
+
+test('the build reads each edition\'s text from editions/NN.html', () => {
+  const { read, error } = renderRecordingReads([{ number: '02', year: 2026, status: 'current' }, { number: '01', year: 2026, status: 'archived' }]);
+  assert.equal(error, undefined);
   assert.deepEqual(read.toSorted(), ['editions/01.html', 'editions/02.html']);
-  read.length = 0;
-  assert.throws(() => render([{ number: '02', year: 2026, status: 'current' }, { number: '1', year: 2026, status: 'archived' }]), /must be two digits/);
+});
+
+test('the build reads no edition text when the manifest is invalid', () => {
+  const { read, error } = renderRecordingReads([{ number: '02', year: 2026, status: 'current' }, { number: '1', year: 2026, status: 'archived' }]);
+  assert.match(error?.message ?? '', /must be two digits/);
   assert.deepEqual(read, [], 'content was read before the manifest validated');
 });
 
