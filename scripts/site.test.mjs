@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 execFileSync(process.execPath, ['scripts/build.mjs']);
 const { default: worker } = await import('../.build/worker.mjs');
@@ -167,4 +167,15 @@ test('the status note links its evidence sentence to the public decision summary
     'https://github.com/verJSON/agile-ai-manifesto/blob/main/docs/decisions/edition-02.md',
     "the repository owner's 2026-11-05 ratification of the architecture review of verJSON's own alignment with Edition 01",
   ]]);
+});
+
+test('the public decision summary exists and leaks no private repository names or gate details', () => {
+  const summaryUrl = new URL('../docs/decisions/edition-02.md', import.meta.url);
+  assert.ok(existsSync(summaryUrl), 'docs/decisions/edition-02.md is missing');
+  const summary = readFileSync(summaryUrl, 'utf8');
+  assertIncludes(summary, '5bbe6712ae657fbf214b6e3b38c18591db19bc64e8dfe99e2659b7e65f982bca');
+  assertIncludes(summary, 'cc07abf1b4ef4d29e28b07a4427910a59535738a0d41b2f83d23d52b8b286ea5');
+  for (const leak of [/verjson-[a-z]/i, /\.github\b/i, /ruleset/i, /bypass/i, /suspended/i, /#\d+/, /\b[0-9a-f]{40}\b/]) {
+    assert.doesNotMatch(summary, leak);
+  }
 });
