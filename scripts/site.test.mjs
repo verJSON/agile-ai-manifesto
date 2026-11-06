@@ -173,9 +173,25 @@ test('the public decision summary exists and leaks no private repository names o
   const summaryUrl = new URL('../docs/decisions/edition-02.md', import.meta.url);
   assert.ok(existsSync(summaryUrl), 'docs/decisions/edition-02.md is missing');
   const summary = readFileSync(summaryUrl, 'utf8');
-  assertIncludes(summary, '5bbe6712ae657fbf214b6e3b38c18591db19bc64e8dfe99e2659b7e65f982bca');
-  assertIncludes(summary, 'cc07abf1b4ef4d29e28b07a4427910a59535738a0d41b2f83d23d52b8b286ea5');
-  for (const leak of [/verjson-[a-z]/i, /\.github\b/i, /ruleset/i, /bypass/i, /suspended/i, /#\d+/, /\b[0-9a-f]{40}\b/]) {
-    assert.doesNotMatch(summary, leak);
+  const slateDigests = [
+    '5bbe6712ae657fbf214b6e3b38c18591db19bc64e8dfe99e2659b7e65f982bca',
+    'cc07abf1b4ef4d29e28b07a4427910a59535738a0d41b2f83d23d52b8b286ea5',
+  ];
+  for (const digest of slateDigests) assertIncludes(summary, digest);
+  const text = slateDigests.reduce((remaining, digest) => remaining.replaceAll(digest, ''), summary);
+  const leaks = {
+    'private repository name': [/verjson-[a-z]/i, /\.github\b/i],
+    'gate detail': [/ruleset/i, /bypass/i, /suspended/i, /renovate/i, /integration\s*\d+/i, /organizationadmin/i, /branch protection/i,
+      /\brequired\b[\w\s-]{0,40}\bchecks?\b[\w\s-]{0,20}\b(off|skipped|skips|no-op|bypass\w*)\b/i],
+    'issue, pull request, or ADR number': [/#\d+/, /\b(ADR|PR|pull request|issue)\s*#?\d+/i],
+    'commit SHA': [/\b[0-9a-f]{7,}\b/],
+    'local path or host': [/\/home\//, /\/tmp\//, /scratchpad/i, /\bwsl\b/i],
+    'CLI name or version': [/\b[\w-]+-cli\b/i, /\d+\.\d+\.\d+/],
+    'session ID': [/\bsession [0-9a-f]{6,}/i],
+    'ballot line': [/\b(ACCEPT|REVISE|REJECT)\b/],
+    'source citation': [/\b[\w.-]+\.(md|py|json|cjs|mjs|html):\d+/i, /\bREADME:\d+/i],
+  };
+  for (const [kind, patterns] of Object.entries(leaks)) {
+    for (const pattern of patterns) assert.doesNotMatch(text, pattern, `summary leaks a ${kind}`);
   }
 });
