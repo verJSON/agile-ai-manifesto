@@ -1,5 +1,7 @@
 # Unreleased
 
+- List every manifesto edition, newest first, as links in the hero label; with JavaScript on they collapse into a disclosure button showing the current edition. Serve each edition at `/editions/NN/` (Edition 01 as published at 3aa4ed3); archived editions get their own title and an archive notice, the current edition's route is canonical to `/`, `/editions/NN` without a trailing slash redirects there with a 308, and all of it derives from one manifest, `editions/editions.json`.
+
 - Load the Microsoft Clarity tag (project `z9fo05sbg6`) in the page head to observe visitor sessions and activity.
 
 - Label the site Edition 02 and link the status note's evidence to a public summary of the two Architecture Review Boards behind it (`docs/decisions/edition-02.md`).

@@ -14,7 +14,7 @@ Open http://127.0.0.1:4173/ and stop the server with Ctrl+C. To use a different 
 
 ## Build and deploy
 
-Edit `public/index.html` and `public/styles.css`, then run `npm run build` to produce the deployable Cloudflare Worker. The build embeds the static site in one Worker, so no asset upload or separate origin is required. Deploy to the configured account and custom domain with `npx wrangler deploy` using an authorized Cloudflare account.
+Edit the site's head and chrome in `public/index.html` and `public/styles.css`, and each edition's manifesto text in `editions/NN.html`, where `NN` is its number in `editions/editions.json`, then run `npm run build` to produce the deployable Cloudflare Worker. The build serves the current edition at `/` and every edition at `/editions/NN/`, all in the same chrome, and embeds every page in one Worker, so no asset upload or separate origin is required. To publish a new edition, add `editions/NN.html` and a manifest entry with its number, year, and status `current`, and mark the previous edition `archived`. Deploy to the configured account and custom domain with `npx wrangler deploy` using an authorized Cloudflare account.
 
 The manifesto describes how agentic software development should work. verJSON reports its progress in one [dated status note](https://agileaimanifesto.org/#status) on the site, which separates what is defined, what is in force, what is demonstrated in operation and what is not yet covered, and links the evidence. Calling the contract approach a direction does not make a status-only contract into a contract for intent, decisions, and evidence.
 
