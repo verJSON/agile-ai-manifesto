@@ -135,3 +135,7 @@ test('Principle 06 keeps blocking findings out of the author\'s hands and requir
 test('Principle 06 says a required check that did not run has not passed and guards changes to checks (M-11)', () => {
   assertIncludes(principle(6), 'Evaluate the checks as rigorously as the results: people and agents optimize for what you measure. A required check that did not run, or produced no verifiable result of its evaluation, has not passed; hold the work it guards and escalate. A check that does not apply to the work is not required for it, does not hold it, and is never counted as evidence about the work. Any change to a check gets at least the scrutiny of the work it guards; weakening a check, or widening who may bypass it, is high-consequence.');
 });
+
+test('Principle 13 keeps dissent on record and sends non-convergence to the accountable owner (M-12)', () => {
+  assertIncludes(principle(13), 'People and agents must be able to surface concerns and challenge assumptions. Keep material dissent, and how it was resolved, in the record. When evaluators do not converge, give the disagreement and the options to the accountable owner instead of averaging it away. A time limit, a missing vote, silence, or agreement among evaluators is not by itself proof of correctness, nor a grant of authority. A recorded dissent is a right to be heard, not by itself a veto.');
+});
