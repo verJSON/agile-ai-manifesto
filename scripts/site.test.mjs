@@ -159,3 +159,12 @@ test('the page carries the Edition 02 label and no Edition 01 label', () => {
   assertIncludes(page, '<p class="edition">EDITION 02 &nbsp;·&nbsp; 2026</p>');
   assert.doesNotMatch(page, /EDITION 01/);
 });
+
+test('the status note links its evidence sentence to the public decision summary', () => {
+  const [, , , body] = page.match(/<(\w+) id="status"([^>]*)>([\s\S]*?)<\/\1>/);
+  const links = [...body.matchAll(/<a href="([^"]+)">([\s\S]*?)<\/a>/g)];
+  assert.deepEqual(links.map(([, href, label]) => [href, textOf(label)]), [[
+    'https://github.com/verJSON/agile-ai-manifesto/blob/main/docs/decisions/edition-02.md',
+    "the repository owner's 2026-11-05 ratification of the architecture review of verJSON's own alignment with Edition 01",
+  ]]);
+});
