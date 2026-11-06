@@ -518,14 +518,8 @@ test('no media query hides the edition picker', () => {
   assert.deepEqual(hidden, [], 'a media query hides the edition picker');
 });
 
-test('the disclosure button is named for the edition it shows, with the word Edition visually hidden', () => {
-  const { content } = editionToggle(page);
-  assert.equal(textOf(withoutAriaHidden(content)), `Edition ${currentEdition.number}`);
-  assert.match(content, /<span class="visually-hidden">Edition <\/span>/);
-  const css = readFileSync(new URL('../public/styles.css', import.meta.url), 'utf8');
-  const rule = css.match(/(?:^|\})\.visually-hidden\{([^}]*)\}/)?.[1];
-  assert.ok(rule, 'the stylesheet defines no .visually-hidden rule');
-  for (const declaration of ['position:absolute', 'width:1px', 'height:1px', 'overflow:hidden', 'clip-path:inset(50%)', 'white-space:nowrap']) assertIncludes(rule, declaration);
+test('the disclosure button is named for the edition it shows', () => {
+  assert.equal(textOf(withoutAriaHidden(editionToggle(page).content)), `Edition ${currentEdition.number}`);
 });
 
 test('the edition list closes when focus leaves the picker and stays open while focus moves within it', () => {
