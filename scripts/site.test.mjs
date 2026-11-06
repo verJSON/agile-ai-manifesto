@@ -549,3 +549,23 @@ test('the build rejects a manifest whose editions are not an array', () => {
 test('the build rejects a manifest with an unknown top-level key', () => {
   assert.throws(() => renderManifest({ editions: validEntries, current: '02' }), /^Error: The manifest has unknown key "current"$/);
 });
+
+function stylesheetRules() {
+  const css = readFileSync(new URL('../public/styles.css', import.meta.url), 'utf8');
+  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .flatMap(([, selectors, declarations]) => selectors.split(',').map((selector) => ({ selector: selector.trim(), declarations })));
+}
+
+test('every nav rule in the stylesheet is scoped to the site header, so none reaches the edition picker', () => {
+  const unscoped = stylesheetRules()
+    .filter(({ selector }) => /(^|[\s>+~])nav(?![\w-])/.test(selector) && !/^\.site-header\s+nav(?![\w-])/.test(selector))
+    .map(({ selector, declarations }) => `${selector}{${declarations}}`);
+  assert.deepEqual(unscoped, [], 'unscoped nav rules');
+});
+
+test('no rule hides elements through a selector without a class or id, which could reach the edition picker', () => {
+  const unqualified = stylesheetRules()
+    .filter(({ selector, declarations }) => /display:\s*none|visibility:\s*hidden/.test(declarations) && !/[.#]/.test(selector))
+    .map(({ selector, declarations }) => `${selector}{${declarations}}`);
+  assert.deepEqual(unqualified, [], 'unqualified hiding rules');
+});
