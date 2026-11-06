@@ -19,7 +19,7 @@ function principle(number) {
 function section(id) {
   const match = page.match(new RegExp(`<section id="${id}"[\\s\\S]*?</section>`));
   assert.ok(match, `section #${id} is missing from the page`);
-  return textOf(match[0]);
+  return match[0];
 }
 
 function assertIncludes(text, expected) {
@@ -40,7 +40,6 @@ test('homepage serves the manifesto and versioned-contracts context', async () =
   assert.match(html, /rel="icon" type="image\/svg\+xml" href="data:image\/svg\+xml,[^"]*%E2%9C%B3/);
   assert.match(html, /https:\/\/verjson\.com\/blog\/versioned-contracts-for-agentic-systems/);
   assert.match(html, /https:\/\/verjson\.com\/blog\/audit-evidence-for-agentic-actions/);
-  assert.match(html, /an evolving direction/);
   assert.deepEqual([...html.matchAll(/<article><span>(\d\d) \/ 13<\/span>/g)].map((match) => Number(match[1])), Array.from({ length: 13 }, (_, index) => index + 1));
   assert.match(html, /<h3>Own the specification\.<\/h3>/);
   assert.doesNotMatch(html, /\/\* SITE_STYLES \*\//);
@@ -74,7 +73,17 @@ test('Principle 04 says what an exchanged contract carries and that status alone
 });
 
 test('Contracts section names the content, rejects the unknown, and separates well formed from true (M-02)', () => {
-  const text = section('contracts');
+  const text = textOf(section('contracts'));
   assertIncludes(text, 'Versioned, machine-readable contracts give agents and system tiers a shared language for intent, decisions, evidence, and who produced them. Explicit versions make change visible, keep the meaning of past records, and support compatibility, audit and continuous improvement. A receiver rejects versions and kinds it does not recognize instead of guessing their meaning. A message that passes its schema is well formed, not true: free text can explain, but it never moves work into an approved or finished state, and a claim about who produced a message stays a claim until it is verified.');
   assertExcludes(text, 'Versioned JSON schemas can give agents');
+});
+
+test('Contracts section drops the undated progress hedge and says a direction does not lower the bar (M-03)', () => {
+  const markup = section('contracts');
+  const text = textOf(markup);
+  assertIncludes(text, 'A direction does not lower the bar: a contract that carries only status is not yet a contract for intent, decisions, and evidence. Read more about versioned contracts and audit evidence.');
+  assertIncludes(markup, '<a href="https://verjson.com/blog/versioned-contracts-for-agentic-systems">versioned contracts</a>');
+  assertIncludes(markup, '<a href="https://verjson.com/blog/audit-evidence-for-agentic-actions">audit evidence</a>');
+  assertExcludes(text, 'verJSON is building toward this approach');
+  assertExcludes(text, 'an evolving direction');
 });
