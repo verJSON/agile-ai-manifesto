@@ -349,8 +349,9 @@ test('the current edition\'s archive route serves the same page as the root', as
   assert.ok(archived === page, `/editions/${currentEdition.number}/ differs from /`);
 });
 
-test('every edition route keeps the site head, differing only in its canonical link', async () => {
-  const headOf = (markup) => markup.match(/<head>([\s\S]*?)<\/head>/)[1].replace(/<link rel="canonical" href="[^"]*">/, '');
+test('every edition route keeps the site head, differing only in its canonical link and titles', async () => {
+  const headOf = (markup) => markup.match(/<head>([\s\S]*?)<\/head>/)[1]
+    .replace(/<link rel="canonical" href="[^"]*">/, '').replace(/<title>[^<]*<\/title>/, '').replace(/<meta (property="og|name="twitter):title" content="[^"]*">/g, '');
   for (const edition of editions) {
     const markup = await (await worker.fetch(new Request(`https://agileaimanifesto.org/editions/${edition.number}/`))).text();
     assert.ok(headOf(markup) === headOf(page), `Edition ${edition.number}'s head differs from the site head`);
@@ -400,7 +401,7 @@ test('the page loads the Microsoft Clarity tag for project z9fo05sbg6 once, in t
   assert.equal(page.match(/clarity\.ms\/tag\//g)?.length, 1, 'expected exactly one Clarity tag');
 });
 
-const fixtureTemplate = '<head><!-- EDITION_CANONICAL --><style>/* SITE_STYLES */</style></head><main><!-- EDITION_NOTICE --><!-- EDITION_LABEL --><!-- EDITION_CONTENT --></main>';
+const fixtureTemplate = '<head><title><!-- PAGE_TITLE --></title><meta property="og:title" content="<!-- PAGE_TITLE -->"><meta name="twitter:title" content="<!-- PAGE_TITLE -->"><!-- EDITION_CANONICAL --><style>/* SITE_STYLES */</style></head><main><!-- EDITION_NOTICE --><!-- EDITION_LABEL --><!-- EDITION_CONTENT --></main>';
 const renderFixture = (entries) => renderPages({
   template: fixtureTemplate,
   css: '',
@@ -461,5 +462,19 @@ test('a known edition route without its trailing slash redirects permanently to 
     const response = await worker.fetch(new Request(`https://agileaimanifesto.org/editions/${edition.number}?ref=citation`));
     assert.equal(response.status, 308, `/editions/${edition.number}`);
     assert.equal(response.headers.get('location'), `https://agileaimanifesto.org/editions/${edition.number}/?ref=citation`);
+  }
+});
+
+test('archived editions carry their own page, Open Graph and Twitter titles; the current edition keeps the site title', async () => {
+  const routes = [['/', currentEdition], ...editions.map((edition) => [`/editions/${edition.number}/`, edition])];
+  for (const [path, edition] of routes) {
+    const [, head] = (await (await worker.fetch(new Request(`https://agileaimanifesto.org${path}`))).text()).match(/<head>([\s\S]*?)<\/head>/);
+    const expected = edition === currentEdition ? 'The Agile AI Manifesto' : `Edition ${edition.number} · The Agile AI Manifesto`;
+    const titles = [
+      [...head.matchAll(/<title>([^<]*)<\/title>/g)].map((match) => match[1]),
+      [...head.matchAll(/<meta property="og:title" content="([^"]*)">/g)].map((match) => match[1]),
+      [...head.matchAll(/<meta name="twitter:title" content="([^"]*)">/g)].map((match) => match[1]),
+    ];
+    assert.deepEqual(titles, [[expected], [expected], [expected]], `${path} titles (page, og, twitter)`);
   }
 });

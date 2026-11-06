@@ -1,11 +1,11 @@
-function fillOnce(html, marker, value) {
-  if (!html.includes(marker) || html.indexOf(marker) !== html.lastIndexOf(marker)) {
-    throw new Error(`Expected exactly one ${marker} marker`);
-  }
-  return html.replace(marker, () => value);
+function fill(html, marker, value, occurrences = 1) {
+  const found = html.split(marker).length - 1;
+  if (found !== occurrences) throw new Error(`Expected ${occurrences} ${marker} marker(s), found ${found}`);
+  return html.replaceAll(marker, () => value);
 }
 
 const SITE_ORIGIN = 'https://agileaimanifesto.org';
+const SITE_TITLE = 'The Agile AI Manifesto';
 const EDITION_STATUSES = ['current', 'archived'];
 const EDITION_FIELDS = ['number', 'year', 'status'];
 
@@ -41,15 +41,17 @@ export function renderPages({ template, css, manifest, readContent }) {
   const editions = [...manifest.editions].sort((a, b) => Number(b.number) - Number(a.number));
   const current = validateEditions(editions);
   const contents = new Map(editions.map((edition) => [edition, readContent(`editions/${edition.number}.html`).trim()]));
-  const styled = fillOnce(template, '/* SITE_STYLES */', css);
+  const styled = fill(template, '/* SITE_STYLES */', css);
   const notice = (edition) => (edition === current ? ''
     : `\n  <div class="wrap"><p class="edition-notice">You are reading Edition ${edition.number}. The current edition is <a href="/">Edition ${current.number}</a>.</p></div>`);
   const canonical = (edition) => `<link rel="canonical" href="${SITE_ORIGIN}${targetOf(edition)}">`;
   const render = (edition) => {
-    let page = fillOnce(styled, '<!-- EDITION_CANONICAL -->', canonical(edition));
-    page = fillOnce(page, '<!-- EDITION_NOTICE -->', notice(edition));
-    page = fillOnce(page, '<!-- EDITION_LABEL -->', editionLabel(editions, edition));
-    return fillOnce(page, '<!-- EDITION_CONTENT -->', contents.get(edition));
+    const title = edition === current ? SITE_TITLE : `Edition ${edition.number} · ${SITE_TITLE}`;
+    let page = fill(styled, '<!-- PAGE_TITLE -->', title, 3);
+    page = fill(page, '<!-- EDITION_CANONICAL -->', canonical(edition));
+    page = fill(page, '<!-- EDITION_NOTICE -->', notice(edition));
+    page = fill(page, '<!-- EDITION_LABEL -->', editionLabel(editions, edition));
+    return fill(page, '<!-- EDITION_CONTENT -->', contents.get(edition));
   };
   const pages = { '/': render(current) };
   for (const edition of editions) pages[`/editions/${edition.number}/`] = render(edition);
