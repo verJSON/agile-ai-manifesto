@@ -329,13 +329,13 @@ test('Escape closes the open edition list and returns focus to the disclosure bu
   assert.equal(document.activeElement, toggle, 'focus does not return to the disclosure button');
 });
 
-test('clicking outside closes the open edition list and returns focus to the disclosure button', () => {
+test('clicking outside closes the open edition list and leaves focus where the click put it', () => {
   const { document, toggle, list, dispatch } = runPageScripts(page);
   dispatch(toggle, 'click');
   document.body.focus();
   dispatch(document.body, 'click');
   assert.deepEqual([list.hidden, toggle.getAttribute('aria-expanded')], [true, 'false'], 'an outside click does not close the list');
-  assert.equal(document.activeElement, toggle, 'focus does not return to the disclosure button');
+  assert.equal(document.activeElement, document.body, 'an outside click moved focus');
 });
 
 test('edition routes that no manifest entry names return 404', async () => {
