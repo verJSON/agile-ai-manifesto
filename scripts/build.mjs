@@ -1,10 +1,20 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
+import { build } from 'esbuild';
 import { renderPages } from './site.mjs';
 
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
-const pages = renderPages({ template: read('public/index.html'), css: read('public/styles.css'), manifest: JSON.parse(read('editions/editions.json')), readContent: read });
-const worker = `const pages = ${JSON.stringify(pages)};\nexport default {\n  async fetch(request) {\n    const url = new URL(request.url);\n    if (url.hostname === 'www.agileaimanifesto.org') {\n      url.protocol = 'https:';\n      url.host = 'agileaimanifesto.org';\n      url.port = '';\n      return Response.redirect(url.href, 308);\n    }\n    if (!Object.hasOwn(pages, url.pathname)) {\n      if (!Object.hasOwn(pages, url.pathname + '/')) return new Response('Not found', { status: 404 });\n      url.pathname += '/';\n      return Response.redirect(url.href, 308);\n    }\n    if (request.method !== 'GET' && request.method !== 'HEAD') return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, HEAD' } });\n    return new Response(request.method === 'HEAD' ? null : pages[url.pathname], { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin' } });\n  }\n};\n`;
+const css = read('public/styles.css');
+const pages = renderPages({ template: read('public/index.html'), css, manifest: JSON.parse(read('editions/editions.json')), readContent: read });
+pages['/privacy/'] = read('public/privacy.html').replace('/* SITE_STYLES */', css);
+const assets = {
+  '/consent.js': { body: await readFile(new URL(import.meta.resolve('@verjson/consent/browser')), 'utf8'), type: 'text/javascript; charset=utf-8' },
+  '/consent-init.js': { body: read('public/consent-init.js'), type: 'text/javascript; charset=utf-8' },
+};
 await mkdir(new URL('.build/', root), { recursive: true });
-await writeFile(new URL('.build/worker.mjs', root), worker);
+await writeFile(new URL('.build/entry.mjs', root), `import { createWorker } from '../scripts/worker.mjs';
+import { consentConfigSchema } from '@verjson/consent';
+export default createWorker({pages: ${JSON.stringify(pages)}, assets: ${JSON.stringify(assets)}, parseConfig: (value) => consentConfigSchema.parse(value)});
+`);
+await build({ entryPoints: [new URL('.build/entry.mjs', root).pathname], outfile: new URL('.build/worker.mjs', root).pathname, bundle: true, format: 'esm', platform: 'browser', target: 'es2022', minify: true });

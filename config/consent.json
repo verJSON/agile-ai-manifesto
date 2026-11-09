@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "siteId": "agile-ai-manifesto",
+  "revision": 1,
+  "policyVersion": "2026-11-09",
+  "privacyUrl": "/privacy/",
+  "consentMaxAgeDays": 180,
+  "refreshIntervalMs": 60000,
+  "clarity": {
+    "enabled": true,
+    "projectId": "z9fo05sbg6"
+  }
+}

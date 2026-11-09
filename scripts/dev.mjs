@@ -1,5 +1,13 @@
 import { createServer } from 'node:http';
 import worker from '../.build/worker.mjs';
+import { readFile } from 'node:fs/promises';
+
+// Explicit local fixture: production always uses the D1 binding.
+const env = process.env.CONSENT_LOCAL_CONFIG ? {
+  CONSENT_DB: { prepare() { return { bind() { return {
+    async first() { return { config_json: await readFile(process.env.CONSENT_LOCAL_CONFIG, 'utf8') }; },
+  }; } }; } },
+} : {};
 
 const port = Number(process.env.PORT || 4173);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -9,7 +17,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 createServer(async (request, response) => {
   try {
     const url = new URL(request.url, `http://localhost:${port}`);
-    const result = await worker.fetch(new Request(url, { method: request.method }));
+    const result = await worker.fetch(new Request(url, { method: request.method }), env);
     response.writeHead(result.status, Object.fromEntries(result.headers));
     response.end(Buffer.from(await result.arrayBuffer()));
   } catch (error) {

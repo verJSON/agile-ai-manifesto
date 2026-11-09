@@ -1,5 +1,7 @@
 # Unreleased
 
+- 2026-11-09 — Part of #14: integrate shared runtime-configured consent, global explicit opt-in, D1 settings, a privacy notice, and browser lifecycle checks.
+
 - List every manifesto edition, newest first, as links in the hero label; with JavaScript on they collapse into a disclosure button showing the current edition. Serve each edition at `/editions/NN/` (Edition 01 as published at 3aa4ed3); archived editions get their own title and an archive notice, the current edition's route is canonical to `/`, `/editions/NN` without a trailing slash redirects there with a 308, and all of it derives from one manifest, `editions/editions.json`.
 
 - Load the Microsoft Clarity tag (project `z9fo05sbg6`) in the page head to observe visitor sessions and activity.

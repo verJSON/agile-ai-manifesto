@@ -5,7 +5,21 @@
   "account_id": "530e6463bf124047787278c97269c32e",
   "workers_dev": false,
   "routes": [
-    { "pattern": "agileaimanifesto.org", "custom_domain": true },
-    { "pattern": "www.agileaimanifesto.org", "custom_domain": true }
+    {
+      "pattern": "agileaimanifesto.org",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.agileaimanifesto.org",
+      "custom_domain": true
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "CONSENT_DB",
+      "database_name": "agile-ai-manifesto-consent",
+      "database_id": "7c5e7c3d-70f8-484d-a854-28c6ac6c026a",
+      "migrations_dir": "migrations"
+    }
   ]
 }
