@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "secrets": [
+    "NODE_AUTH_TOKEN"
+  ],
+  "levels": [
+    {
+      "id": "ci",
+      "events": [
+        "pull_request"
+      ],
+      "inputs": {
+        "node-version": "24.22.2",
+        "approved-internal-packages": "@verjson/consent",
+        "secretless-ci-script-plan": "[\"build\", \"test\", \"test:e2e:ci\"]",
+        "secretless-pr": true,
+        "secretless-rebuild-packages": "esbuild\nworkerd",
+        "browser-cache": true
+      }
+    },
+    {
+      "id": "trusted",
+      "events": [
+        "push",
+        "workflow_dispatch"
+      ],
+      "inputs": {
+        "node-version": "24.22.2",
+        "approved-internal-packages": "@verjson/consent",
+        "secretless-ci-script-plan": "[\"build\", \"test\", \"test:e2e:ci\"]",
+        "secretless-trusted-ref": true,
+        "secretless-rebuild-packages": "esbuild\nworkerd",
+        "browser-cache": true
+      }
+    }
+  ]
+}

@@ -397,11 +397,14 @@ test('the public decision summary exists and leaks no private repository names o
   }
 });
 
-test('the page loads the Microsoft Clarity tag for project z9fo05sbg6 once, in the head', () => {
-  const [, head] = page.match(/<head>([\s\S]*?)<\/head>/);
-  assertIncludes(head, '"https://www.clarity.ms/tag/"+i');
-  assertIncludes(head, '(window, document, "clarity", "script", "z9fo05sbg6")');
-  assert.equal(page.match(/clarity\.ms\/tag\//g)?.length, 1, 'expected exactly one Clarity tag');
+test('every edition defers Clarity to the same-origin consent client', async () => {
+  for (const path of ['/', ...editions.map(({ number }) => `/editions/${number}/`)]) {
+    const html = await (await worker.fetch(new Request(`https://agileaimanifesto.org${path}`))).text();
+    assert.doesNotMatch(html, /clarity\.ms|z9fo05sbg6/);
+    assert.match(html, /<script type="module" src="\/consent-init.js"><\/script>/);
+    assert.match(html, /data-consent-settings/);
+    assert.match(html, /href="\/privacy\/"/);
+  }
 });
 
 const fixtureTemplate = '<head><title><!-- PAGE_TITLE --></title><meta property="og:title" content="<!-- PAGE_TITLE -->"><meta name="twitter:title" content="<!-- PAGE_TITLE -->"><!-- EDITION_CANONICAL --><style>/* SITE_STYLES */</style></head><main><a class="wordmark" href="<!-- HOME_HREF -->"></a><a class="wordmark" href="<!-- HOME_HREF -->"></a><!-- EDITION_NOTICE --><!-- EDITION_LABEL --><!-- EDITION_CONTENT --></main>';
@@ -569,5 +572,66 @@ test('the build rejects an edition entry that is not a plain object, before read
     const { read, error } = renderRecordingReads([validEntries[0], entry]);
     assert.match(String(error), /^Error: The manifest's edition at index 1 must be an object$/, JSON.stringify(entry));
     assert.deepEqual(read, [], `content was read for ${JSON.stringify(entry)}`);
+  }
+});
+
+
+test('runtime consent configuration is read from the database on every request', async () => {
+  const config = { schemaVersion: 1, siteId: 'agile-ai-manifesto', revision: 1, policyVersion: '2026-11-09', privacyUrl: '/privacy/', consentMaxAgeDays: 180, refreshIntervalMs: 60000, clarity: { enabled: true, projectId: 'z9fo05sbg6' } };
+  const queries = [];
+  const env = { CONSENT_DB: { prepare(sql) { return { bind(siteId) { queries.push({ sql, siteId }); return { async first() { return { config_json: JSON.stringify(config) }; } }; } }; } } };
+  for (const country of ['DE', 'GB', 'CH', 'US', undefined]) {
+    const request = new Request('https://agileaimanifesto.org/api/consent-config');
+    Object.defineProperty(request, 'cf', { value: { country } });
+    const response = await worker.fetch(request, env);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.deepEqual(await response.json(), config);
+  }
+  config.revision = 2;
+  config.clarity.enabled = false;
+  const changed = await worker.fetch(new Request('https://agileaimanifesto.org/api/consent-config'), env);
+  assert.equal((await changed.json()).clarity.enabled, false);
+  assert.equal(queries.length, 6);
+  assert.ok(queries.every(({ sql, siteId }) => sql.includes('WHERE site_id = ?') && siteId === config.siteId));
+});
+
+
+test('unavailable consent storage leaves pages usable and returns a non-cacheable error', async () => {
+  const response = await worker.fetch(new Request('https://agileaimanifesto.org/api/consent-config'));
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(await response.json(), { error: 'Consent configuration unavailable' });
+  assert.equal((await worker.fetch(new Request('https://agileaimanifesto.org/'))).status, 200);
+});
+
+test('invalid database configuration never becomes a public tracking configuration', async () => {
+  const config = JSON.parse(readFileSync(new URL('../config/consent.json', import.meta.url), 'utf8'));
+  const invalidValues = [null, { ...config, privacyUrl: 'javascript:alert(1)' }, { ...config, siteId: 'another-site' }, { ...config, script: 'alert(1)' }];
+  for (const value of invalidValues) {
+    const env = { CONSENT_DB: { prepare() { return { bind() { return { async first() { return { config_json: JSON.stringify(value) }; } }; } }; } } };
+    const response = await worker.fetch(new Request('https://agileaimanifesto.org/api/consent-config'), env);
+    assert.equal(response.status, 503, `configuration must be rejected: ${JSON.stringify(value)}`);
+    assert.deepEqual(await response.json(), { error: 'Consent configuration unavailable' });
+  }
+});
+
+test('public consent configuration endpoint cannot write settings', async () => {
+  for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+    const response = await worker.fetch(new Request('https://agileaimanifesto.org/api/consent-config', { method }));
+    assert.equal(response.status, 405);
+    assert.equal(response.headers.get('allow'), 'GET, HEAD');
+  }
+});
+
+test('privacy notice and consent assets are served with correct content types', async () => {
+  const notice = await worker.fetch(new Request('https://agileaimanifesto.org/privacy/'));
+  assert.equal(notice.status, 200);
+  assert.match(await notice.text(), /30-day|30 days/);
+  for (const path of ['/consent.js', '/consent-init.js']) {
+    const response = await worker.fetch(new Request(`https://agileaimanifesto.org${path}`));
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /^text\/javascript/);
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
   }
 });
